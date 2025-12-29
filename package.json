@@ -1,6 +1,6 @@
 {
   "name": "caldav-tasks",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "a cross-platform CalDAV task management app",
   "type": "module",
   "license": "zlib/libpng",
