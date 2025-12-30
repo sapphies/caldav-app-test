@@ -33,6 +33,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libsoup2.4-dev libssl-dev libgtk-3-dev libjavascriptcoregtk-4.0-dev
 
+      - name: Install ARM64 Linux dependencies
+        if: matrix.args == '--target aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu libgtk-3-dev:arm64 libwebkit2gtk-4.0-dev:arm64 libappindicator3-dev:arm64 librsvg2-dev:arm64 libsoup2.4-dev:arm64 libssl-dev:arm64
+
+      - name: Set PKG_CONFIG for cross-compilation
+        if: matrix.args == '--target aarch64-unknown-linux-gnu'
+        run: |
+          echo "PKG_CONFIG=aarch64-linux-gnu-pkg-config" >> $GITHUB_ENV
+
       - name: setup node
         uses: actions/setup-node@v4
         with:
