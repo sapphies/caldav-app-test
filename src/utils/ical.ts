@@ -1,24 +1,28 @@
-import ICAL from 'ical.js';
+/**
+ * Lightweight iCal VTODO parser and generator
+ * Replaces ical.js (~266KB) with minimal implementation for VTODO support
+ */
+
 import { Task, Priority, Subtask } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { useTaskStore } from '@/store/taskStore';
 
-// apple epoch: January 1, 2001 00:00:00 GMT in milliseconds since Unix epoch
-// used for X-APPLE-SORT-ORDER which stores seconds since Apple epoch
+// Apple epoch: January 1, 2001 00:00:00 GMT in milliseconds since Unix epoch
+// Used for X-APPLE-SORT-ORDER which stores seconds since Apple epoch
 export const APPLE_EPOCH = 978307200000;
 
-// convert Unix timestamp (milliseconds) to Apple epoch (seconds)
+// Convert Unix timestamp (milliseconds) to Apple epoch (seconds)
 export function toAppleEpoch(timestamp: number): number {
   return Math.floor((timestamp - APPLE_EPOCH) / 1000);
 }
 
-// convert Apple epoch (seconds) to Unix timestamp (milliseconds)
+// Convert Apple epoch (seconds) to Unix timestamp (milliseconds)
 export function fromAppleEpoch(appleSeconds: number): number {
   return appleSeconds * 1000 + APPLE_EPOCH;
 }
 
-// priority mapping: iCalendar uses 1-9 (1 = highest, 9 = lowest)
-// we map: high = 1, medium = 5, low = 9, none = 0
+// Priority mapping: iCalendar uses 1-9 (1 = highest, 9 = lowest)
+// We map: high = 1, medium = 5, low = 9, none = 0
 const priorityToIcal: Record<Priority, number> = {
   high: 1,
   medium: 5,
@@ -33,47 +37,327 @@ const icalToPriority = (priority: number): Priority => {
   return 'low';
 };
 
-export function taskToVTodo(task: Task): string {
-  const comp = new ICAL.Component(['vcalendar', [], []]);
-  comp.updatePropertyWithValue('version', '2.0');
-  comp.updatePropertyWithValue('prodid', '-//CalDAV Tasks//EN');
+/**
+ * Format a Date as iCalendar datetime (UTC)
+ * Format: YYYYMMDDTHHMMSSZ
+ */
+function formatICalDate(date: Date): string {
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return (
+    date.getUTCFullYear().toString() +
+    pad(date.getUTCMonth() + 1) +
+    pad(date.getUTCDate()) +
+    'T' +
+    pad(date.getUTCHours()) +
+    pad(date.getUTCMinutes()) +
+    pad(date.getUTCSeconds()) +
+    'Z'
+  );
+}
 
-  const vtodo = new ICAL.Component('vtodo');
+/**
+ * Parse an iCalendar datetime string to Date
+ * Supports: YYYYMMDDTHHMMSSZ, YYYYMMDDTHHMMSS, YYYYMMDD
+ */
+function parseICalDate(value: string): Date | undefined {
+  if (!value) return undefined;
   
-  // required fields
-  vtodo.updatePropertyWithValue('uid', task.uid);
-  vtodo.updatePropertyWithValue('dtstamp', ICAL.Time.now());
-  vtodo.updatePropertyWithValue('created', ICAL.Time.fromJSDate(new Date(task.createdAt)));
-  vtodo.updatePropertyWithValue('last-modified', ICAL.Time.fromJSDate(new Date(task.modifiedAt)));
+  // Remove any parameters before the value (e.g., TZID=...)
+  const cleanValue = value.trim();
+  
+  // UTC format: 20231225T120000Z
+  if (cleanValue.endsWith('Z')) {
+    const match = cleanValue.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/);
+    if (match) {
+      const [, year, month, day, hour, minute, second] = match;
+      return new Date(Date.UTC(
+        parseInt(year),
+        parseInt(month) - 1,
+        parseInt(day),
+        parseInt(hour),
+        parseInt(minute),
+        parseInt(second)
+      ));
+    }
+  }
+  
+  // Local datetime: 20231225T120000
+  const dtMatch = cleanValue.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})$/);
+  if (dtMatch) {
+    const [, year, month, day, hour, minute, second] = dtMatch;
+    return new Date(
+      parseInt(year),
+      parseInt(month) - 1,
+      parseInt(day),
+      parseInt(hour),
+      parseInt(minute),
+      parseInt(second)
+    );
+  }
+  
+  // Date only: 20231225
+  const dateMatch = cleanValue.match(/^(\d{4})(\d{2})(\d{2})$/);
+  if (dateMatch) {
+    const [, year, month, day] = dateMatch;
+    return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+  }
+  
+  return undefined;
+}
 
-  // title and description
-  vtodo.updatePropertyWithValue('summary', task.title);
+/**
+ * Escape text for iCalendar format
+ * Escapes: backslash, semicolon, comma, newline
+ */
+function escapeICalText(text: string): string {
+  return text
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\n/g, '\\n');
+}
+
+/**
+ * Unescape iCalendar text
+ */
+function unescapeICalText(text: string): string {
+  return text
+    .replace(/\\n/g, '\n')
+    .replace(/\\,/g, ',')
+    .replace(/\\;/g, ';')
+    .replace(/\\\\/g, '\\');
+}
+
+/**
+ * Fold long lines according to RFC 5545 (max 75 octets per line)
+ */
+function foldLine(line: string): string {
+  const maxLength = 75;
+  if (line.length <= maxLength) return line;
+  
+  const lines: string[] = [];
+  let remaining = line;
+  
+  // First line can be up to 75 chars
+  lines.push(remaining.slice(0, maxLength));
+  remaining = remaining.slice(maxLength);
+  
+  // Continuation lines start with space and can have 74 more chars
+  while (remaining.length > 0) {
+    lines.push(' ' + remaining.slice(0, maxLength - 1));
+    remaining = remaining.slice(maxLength - 1);
+  }
+  
+  return lines.join('\r\n');
+}
+
+/**
+ * Unfold iCalendar content lines (join lines that start with space/tab)
+ */
+function unfoldLines(content: string): string {
+  // Normalize line endings
+  return content
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .replace(/\n[ \t]/g, '');
+}
+
+interface ICalProperty {
+  name: string;
+  params: Record<string, string>;
+  value: string;
+}
+
+/**
+ * Parse a single iCalendar property line
+ * Format: NAME;PARAM=value:VALUE or NAME:VALUE
+ */
+function parseProperty(line: string): ICalProperty | null {
+  const colonIndex = line.indexOf(':');
+  if (colonIndex === -1) return null;
+  
+  const header = line.slice(0, colonIndex);
+  const value = line.slice(colonIndex + 1);
+  
+  // Parse name and parameters
+  const parts = header.split(';');
+  const name = parts[0].toUpperCase();
+  const params: Record<string, string> = {};
+  
+  for (let i = 1; i < parts.length; i++) {
+    const paramPart = parts[i];
+    const eqIndex = paramPart.indexOf('=');
+    if (eqIndex !== -1) {
+      const paramName = paramPart.slice(0, eqIndex).toUpperCase();
+      let paramValue = paramPart.slice(eqIndex + 1);
+      // Remove quotes if present
+      if (paramValue.startsWith('"') && paramValue.endsWith('"')) {
+        paramValue = paramValue.slice(1, -1);
+      }
+      params[paramName] = paramValue;
+    }
+  }
+  
+  return { name, params, value };
+}
+
+interface ParsedVTodo {
+  uid?: string;
+  summary?: string;
+  description?: string;
+  status?: string;
+  priority?: number;
+  categories?: string[];
+  dtstart?: Date;
+  due?: Date;
+  completed?: Date;
+  created?: Date;
+  lastModified?: Date;
+  sortOrder?: number;
+  subtasksJson?: string;
+  isCollapsed?: boolean;
+  parentUid?: string;
+}
+
+/**
+ * Parse VTODO content into structured data
+ */
+function parseVTodo(vtodoContent: string): ParsedVTodo {
+  const result: ParsedVTodo = {};
+  const lines = unfoldLines(vtodoContent).split('\n');
+  
+  for (const line of lines) {
+    if (!line.trim() || line.startsWith('BEGIN:') || line.startsWith('END:')) {
+      continue;
+    }
+    
+    const prop = parseProperty(line);
+    if (!prop) continue;
+    
+    switch (prop.name) {
+      case 'UID':
+        result.uid = prop.value;
+        break;
+      case 'SUMMARY':
+        result.summary = unescapeICalText(prop.value);
+        break;
+      case 'DESCRIPTION':
+        result.description = unescapeICalText(prop.value);
+        break;
+      case 'STATUS':
+        result.status = prop.value.toUpperCase();
+        break;
+      case 'PRIORITY':
+        result.priority = parseInt(prop.value, 10) || 0;
+        break;
+      case 'CATEGORIES':
+        // Categories can be comma-separated
+        result.categories = prop.value.split(',').map(c => unescapeICalText(c.trim()));
+        break;
+      case 'DTSTART':
+        result.dtstart = parseICalDate(prop.value);
+        break;
+      case 'DUE':
+        result.due = parseICalDate(prop.value);
+        break;
+      case 'COMPLETED':
+        result.completed = parseICalDate(prop.value);
+        break;
+      case 'CREATED':
+        result.created = parseICalDate(prop.value);
+        break;
+      case 'LAST-MODIFIED':
+        result.lastModified = parseICalDate(prop.value);
+        break;
+      case 'X-APPLE-SORT-ORDER':
+        result.sortOrder = parseInt(prop.value, 10);
+        break;
+      case 'X-CALDAV-TASKS-SUBTASKS':
+        result.subtasksJson = prop.value;
+        break;
+      case 'X-APPLE-COLLAPSED':
+        result.isCollapsed = prop.value === '1';
+        break;
+      case 'RELATED-TO':
+        // Only use PARENT relationship
+        const relType = prop.params['RELTYPE'];
+        if (!relType || relType.toUpperCase() === 'PARENT') {
+          result.parentUid = prop.value;
+        }
+        break;
+    }
+  }
+  
+  return result;
+}
+
+/**
+ * Extract VTODO blocks from iCalendar content
+ */
+function extractVTodos(icalContent: string): string[] {
+  const vtodos: string[] = [];
+  const content = unfoldLines(icalContent);
+  const lines = content.split('\n');
+  
+  let inVTodo = false;
+  let currentVTodo: string[] = [];
+  
+  for (const line of lines) {
+    const trimmed = line.trim().toUpperCase();
+    
+    if (trimmed === 'BEGIN:VTODO') {
+      inVTodo = true;
+      currentVTodo = [];
+    } else if (trimmed === 'END:VTODO') {
+      if (inVTodo) {
+        vtodos.push(currentVTodo.join('\n'));
+        currentVTodo = [];
+      }
+      inVTodo = false;
+    } else if (inVTodo) {
+      currentVTodo.push(line);
+    }
+  }
+  
+  return vtodos;
+}
+
+/**
+ * Generate a VTODO component as string
+ */
+function generateVTodo(task: Task): string {
+  const lines: string[] = [];
+  
+  lines.push('BEGIN:VTODO');
+  lines.push(`UID:${task.uid}`);
+  lines.push(`DTSTAMP:${formatICalDate(new Date())}`);
+  lines.push(`CREATED:${formatICalDate(new Date(task.createdAt))}`);
+  lines.push(`LAST-MODIFIED:${formatICalDate(new Date(task.modifiedAt))}`);
+  lines.push(`SUMMARY:${escapeICalText(task.title)}`);
+  
   if (task.description) {
-    vtodo.updatePropertyWithValue('description', task.description);
+    lines.push(`DESCRIPTION:${escapeICalText(task.description)}`);
   }
-
-  // status
-  vtodo.updatePropertyWithValue('status', task.completed ? 'COMPLETED' : 'NEEDS-ACTION');
+  
+  lines.push(`STATUS:${task.completed ? 'COMPLETED' : 'NEEDS-ACTION'}`);
+  
   if (task.completed && task.completedAt) {
-    vtodo.updatePropertyWithValue('completed', ICAL.Time.fromJSDate(new Date(task.completedAt)));
+    lines.push(`COMPLETED:${formatICalDate(new Date(task.completedAt))}`);
   }
-
-  // priority
-  vtodo.updatePropertyWithValue('priority', priorityToIcal[task.priority]);
-
-  // dates
+  
+  lines.push(`PRIORITY:${priorityToIcal[task.priority]}`);
+  
   if (task.startDate) {
-    vtodo.updatePropertyWithValue('dtstart', ICAL.Time.fromJSDate(new Date(task.startDate)));
+    lines.push(`DTSTART:${formatICalDate(new Date(task.startDate))}`);
   }
+  
   if (task.dueDate) {
-    vtodo.updatePropertyWithValue('due', ICAL.Time.fromJSDate(new Date(task.dueDate)));
+    lines.push(`DUE:${formatICalDate(new Date(task.dueDate))}`);
   }
-
-  // x-apple-sort-order for manual sorting (compatible with Apple Reminders, Nextcloud Tasks)
-  vtodo.updatePropertyWithValue('x-apple-sort-order', task.sortOrder.toString());
-
-  // tags - stored as CATEGORIES for CalDAV compatibility
-  // Convert tag IDs to tag names
+  
+  lines.push(`X-APPLE-SORT-ORDER:${task.sortOrder}`);
+  
+  // Tags as CATEGORIES
   if (task.tags && task.tags.length > 0) {
     const tags = useTaskStore.getState().tags;
     const tagNames = task.tags
@@ -81,40 +365,66 @@ export function taskToVTodo(task: Task): string {
       .filter((name): name is string => Boolean(name));
     
     if (tagNames.length > 0) {
-      // Use Property with setValues to properly encode multiple categories
-      // This creates CATEGORIES:tag1,tag2 where each is a separate value
-      // rather than a single value "tag1,tag2"
-      const categoriesProp = new ICAL.Property('categories', vtodo);
-      categoriesProp.setValues(tagNames);
-      vtodo.addProperty(categoriesProp);
+      const escaped = tagNames.map(n => escapeICalText(n));
+      lines.push(`CATEGORIES:${escaped.join(',')}`);
     }
   }
-
-  // parent-child relationship using RELATED-TO (CalDAV standard)
+  
+  // Parent relationship
   if (task.parentUid) {
-    // add RELATED-TO property with RELTYPE=PARENT parameter
-    // this creates a parent-child relationship in CalDAV
-    const relatedTo = new ICAL.Property('related-to', vtodo);
-    relatedTo.setValue(task.parentUid);
-    relatedTo.setParameter('reltype', 'PARENT');
-    vtodo.addProperty(relatedTo);
+    lines.push(`RELATED-TO;RELTYPE=PARENT:${task.parentUid}`);
   }
-
-  // not a caldav standard
+  
+  // Collapsed state
   if (task.isCollapsed) {
-    vtodo.updatePropertyWithValue('x-apple-collapsed', '1');
+    lines.push('X-APPLE-COLLAPSED:1');
   }
-
-  // not a caldav standard. only used in our app for exporting / importing
+  
+  // Legacy subtasks (app-specific)
   if (task.subtasks.length > 0) {
     const subtasksJson = JSON.stringify(task.subtasks);
-    vtodo.updatePropertyWithValue('x-caldav-tasks-subtasks', subtasksJson);
+    lines.push(`X-CALDAV-TASKS-SUBTASKS:${subtasksJson}`);
   }
-
-  comp.addSubcomponent(vtodo);
-  return comp.toString();
+  
+  lines.push('END:VTODO');
+  
+  // Fold long lines
+  return lines.map(foldLine).join('\r\n');
 }
 
+/**
+ * Generate a complete VCALENDAR with VTODOs
+ */
+function generateVCalendar(vtodos: string[]): string {
+  const lines: string[] = [];
+  lines.push('BEGIN:VCALENDAR');
+  lines.push('VERSION:2.0');
+  lines.push('PRODID:-//CalDAV Tasks//EN');
+  
+  for (const vtodo of vtodos) {
+    lines.push(vtodo);
+  }
+  
+  lines.push('END:VCALENDAR');
+  
+  return lines.join('\r\n');
+}
+
+// ============================================================================
+// Public API - Drop-in replacements for ical.js functions
+// ============================================================================
+
+/**
+ * Convert a Task to iCalendar VTODO format
+ */
+export function taskToVTodo(task: Task): string {
+  const vtodo = generateVTodo(task);
+  return generateVCalendar([vtodo]);
+}
+
+/**
+ * Parse iCalendar string and convert to Task
+ */
 export function vtodoToTask(
   icalString: string,
   accountId: string,
@@ -123,99 +433,54 @@ export function vtodoToTask(
   etag?: string
 ): Task | null {
   try {
-    const jcalData = ICAL.parse(icalString);
-    const comp = new ICAL.Component(jcalData);
-    const vtodo = comp.getFirstSubcomponent('vtodo');
-
-    if (!vtodo) return null;
-
-    const uid = vtodo.getFirstPropertyValue('uid') as string;
-    const summary = vtodo.getFirstPropertyValue('summary') as string;
-    const description = vtodo.getFirstPropertyValue('description') as string;
-    const status = vtodo.getFirstPropertyValue('status') as string;
-    const priority = vtodo.getFirstPropertyValue('priority') as number;
+    const vtodos = extractVTodos(icalString);
+    if (vtodos.length === 0) return null;
     
-    // CATEGORIES can have multiple values - get all of them
-    // Some clients use comma-separated values, others use multiple values
-    let categories: string | undefined;
-    const categoriesProp = vtodo.getFirstProperty('categories');
-    if (categoriesProp) {
-      const values = categoriesProp.getValues() as string[];
-      categories = values.join(',');
-      console.log('[iCal] Parsed CATEGORIES:', categories, 'from values:', values);
-    }
+    const parsed = parseVTodo(vtodos[0]);
     
-    const sortOrder = vtodo.getFirstPropertyValue('x-apple-sort-order');
-    const subtasksJson = vtodo.getFirstPropertyValue('x-caldav-tasks-subtasks') as string;
-    const isCollapsed = vtodo.getFirstPropertyValue('x-apple-collapsed') === '1';
-
-    // parse RELATED-TO property for parent-child relationships
-    let parentUid: string | undefined;
-    const relatedToProps = vtodo.getAllProperties('related-to');
-    for (const prop of relatedToProps) {
-      const relType = prop.getParameter('reltype');
-      // if RELTYPE is PARENT or not specified, this is the parent relationship
-      if (!relType || relType.toUpperCase() === 'PARENT') {
-        parentUid = prop.getFirstValue() as string;
-        break;
-      }
-    }
-
-    // parse dates
-    const created = vtodo.getFirstPropertyValue('created');
-    const lastModified = vtodo.getFirstPropertyValue('last-modified');
-    const dtstart = vtodo.getFirstPropertyValue('dtstart');
-    const due = vtodo.getFirstPropertyValue('due');
-    const completed = vtodo.getFirstPropertyValue('completed');
-
-    // parse subtasks
+    // Parse subtasks
     let subtasks: Subtask[] = [];
-    if (subtasksJson) {
+    if (parsed.subtasksJson) {
       try {
-        subtasks = JSON.parse(subtasksJson);
+        subtasks = JSON.parse(parsed.subtasksJson);
       } catch {
         subtasks = [];
       }
     }
-
-    // parse sort order (X-APPLE-SORT-ORDER)
-    // this is stored as seconds since Apple epoch (Jan 1, 2001)
-    // if not present, use creation date converted to Apple epoch format
-    const createdDate = created ? (created as ICAL.Time).toJSDate() : new Date();
-    let parsedSortOrder: number;
-    if (sortOrder !== null && sortOrder !== undefined) {
-      parsedSortOrder = parseInt(sortOrder as string, 10);
-      if (isNaN(parsedSortOrder)) {
-        parsedSortOrder = toAppleEpoch(createdDate.getTime());
-      }
+    
+    // Calculate sort order
+    const createdDate = parsed.created || new Date();
+    let sortOrder: number;
+    if (parsed.sortOrder !== undefined && !isNaN(parsed.sortOrder)) {
+      sortOrder = parsed.sortOrder;
     } else {
-      parsedSortOrder = toAppleEpoch(createdDate.getTime());
+      sortOrder = toAppleEpoch(createdDate.getTime());
     }
-
+    
     const task: Task = {
       id: uuidv4(),
-      uid: uid || uuidv4(),
+      uid: parsed.uid || uuidv4(),
       etag,
       href,
-      title: summary || 'Untitled Task',
-      description: description || '',
-      completed: status === 'COMPLETED',
-      completedAt: completed ? (completed as ICAL.Time).toJSDate() : undefined,
-      priority: icalToPriority(priority || 0),
-      categoryId: categories || undefined,
-      startDate: dtstart ? (dtstart as ICAL.Time).toJSDate() : undefined,
-      dueDate: due ? (due as ICAL.Time).toJSDate() : undefined,
+      title: parsed.summary || 'Untitled Task',
+      description: parsed.description || '',
+      completed: parsed.status === 'COMPLETED',
+      completedAt: parsed.completed,
+      priority: icalToPriority(parsed.priority || 0),
+      categoryId: parsed.categories?.join(',') || undefined,
+      startDate: parsed.dtstart,
+      dueDate: parsed.due,
       createdAt: createdDate,
-      modifiedAt: lastModified ? (lastModified as ICAL.Time).toJSDate() : new Date(),
+      modifiedAt: parsed.lastModified || new Date(),
       subtasks,
-      parentUid,
-      isCollapsed,
-      sortOrder: parsedSortOrder,
+      parentUid: parsed.parentUid,
+      isCollapsed: parsed.isCollapsed || false,
+      sortOrder,
       accountId,
       calendarId,
       synced: true,
     };
-
+    
     return task;
   } catch (error) {
     console.error('Error parsing VTODO:', error);
@@ -223,56 +488,44 @@ export function vtodoToTask(
   }
 }
 
+/**
+ * Generate a unique iCalendar UID
+ */
 export function generateICalUid(): string {
   return `${uuidv4()}@caldav-tasks`;
 }
 
 /**
- * export a single task as iCalendar format with all its subtasks
+ * Export a single task as iCalendar format with all its child tasks
  */
 export function exportTaskAsIcs(task: Task, childTasks: Task[] = []): string {
-  const comp = new ICAL.Component(['vcalendar', [], []]);
-  comp.updatePropertyWithValue('version', '2.0');
-  comp.updatePropertyWithValue('prodid', '-//CalDAV Tasks//EN');
+  const vtodos: string[] = [];
+  vtodos.push(generateVTodo(task));
   
-  // add main task
-  const mainVtodo = buildVtodo(task);
-  comp.addSubcomponent(mainVtodo);
-  
-  // add child tasks (subtasks in hierarchy)
   for (const childTask of childTasks) {
-    const childVtodo = buildVtodo(childTask);
-    comp.addSubcomponent(childVtodo);
+    vtodos.push(generateVTodo(childTask));
   }
   
-  return comp.toString();
+  return generateVCalendar(vtodos);
 }
 
 /**
- * export multiple tasks as iCalendar format
+ * Export multiple tasks as iCalendar format
  */
 export function exportTasksAsIcs(tasks: Task[]): string {
-  const comp = new ICAL.Component(['vcalendar', [], []]);
-  comp.updatePropertyWithValue('version', '2.0');
-  comp.updatePropertyWithValue('prodid', '-//CalDAV Tasks//EN');
-  
-  for (const task of tasks) {
-    const vtodo = buildVtodo(task);
-    comp.addSubcomponent(vtodo);
-  }
-  
-  return comp.toString();
+  const vtodos = tasks.map(task => generateVTodo(task));
+  return generateVCalendar(vtodos);
 }
 
 /**
- * export tasks as JSON for backup/export
+ * Export tasks as JSON for backup/export
  */
 export function exportTasksAsJson(tasks: Task[]): string {
   return JSON.stringify(tasks, null, 2);
 }
 
 /**
- * export tasks as Markdown checklist format
+ * Export tasks as Markdown checklist format
  */
 export function exportTasksAsMarkdown(tasks: Task[], level: number = 0): string {
   let markdown = '';
@@ -282,7 +535,7 @@ export function exportTasksAsMarkdown(tasks: Task[], level: number = 0): string 
     const checkbox = task.completed ? '[x]' : '[ ]';
     let line = `${indent}${checkbox} ${task.title}`;
     
-    // add metadata if present
+    // Add metadata if present
     const metadata: string[] = [];
     if (task.priority !== 'none') {
       metadata.push(`Priority: ${task.priority}`);
@@ -309,7 +562,7 @@ export function exportTasksAsMarkdown(tasks: Task[], level: number = 0): string 
 }
 
 /**
- * export tasks as CSV format
+ * Export tasks as CSV format
  */
 export function exportTasksAsCsv(tasks: Task[]): string {
   const headers = ['Title', 'Description', 'Status', 'Priority', 'Due Date', 'Start Date', 'Category', 'Created', 'Modified'];
@@ -329,94 +582,53 @@ export function exportTasksAsCsv(tasks: Task[]): string {
 }
 
 /**
- * parse an ICS file and extract all tasks (VTODOs)
- * returns parsed tasks without accountId/calendarId - caller must assign them
+ * Parse an ICS file and extract all tasks (VTODOs)
+ * Returns parsed tasks without accountId/calendarId - caller must assign them
  */
 export function parseIcsFile(icsContent: string): Partial<Task>[] {
   try {
-    const jcalData = ICAL.parse(icsContent);
-    const comp = new ICAL.Component(jcalData);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const vtodos = (comp as any).getAllSubcomponents('vtodo') as ICAL.Component[];
-    
+    const vtodos = extractVTodos(icsContent);
     const tasks: Partial<Task>[] = [];
     
-    for (const vtodo of vtodos) {
-      const uid = vtodo.getFirstPropertyValue('uid') as string;
-      const summary = vtodo.getFirstPropertyValue('summary') as string;
-      const description = vtodo.getFirstPropertyValue('description') as string;
-      const status = vtodo.getFirstPropertyValue('status') as string;
-      const priority = vtodo.getFirstPropertyValue('priority') as number;
+    for (const vtodoContent of vtodos) {
+      const parsed = parseVTodo(vtodoContent);
       
-      // CATEGORIES can have multiple values - get all of them
-      let categories: string | undefined;
-      const categoriesProp = vtodo.getFirstProperty('categories');
-      if (categoriesProp) {
-        const values = categoriesProp.getValues() as string[];
-        categories = values.join(',');
-      }
-      
-      const sortOrder = vtodo.getFirstPropertyValue('x-apple-sort-order');
-      const subtasksJson = vtodo.getFirstPropertyValue('x-caldav-tasks-subtasks') as string;
-      const isCollapsed = vtodo.getFirstPropertyValue('x-apple-collapsed') === '1';
-
-      // parse RELATED-TO property for parent-child relationships
-      let parentUid: string | undefined;
-      const relatedToProps = vtodo.getAllProperties('related-to');
-      for (const prop of relatedToProps) {
-        const relType = prop.getParameter('reltype');
-        if (!relType || relType.toUpperCase() === 'PARENT') {
-          parentUid = prop.getFirstValue() as string;
-          break;
-        }
-      }
-
-      // parse dates
-      const created = vtodo.getFirstPropertyValue('created');
-      const lastModified = vtodo.getFirstPropertyValue('last-modified');
-      const dtstart = vtodo.getFirstPropertyValue('dtstart');
-      const due = vtodo.getFirstPropertyValue('due');
-      const completed = vtodo.getFirstPropertyValue('completed');
-
-      // parse subtasks
+      // Parse subtasks
       let subtasks: Subtask[] = [];
-      if (subtasksJson) {
+      if (parsed.subtasksJson) {
         try {
-          subtasks = JSON.parse(subtasksJson);
+          subtasks = JSON.parse(parsed.subtasksJson);
         } catch {
           subtasks = [];
         }
       }
-
-      // parse sort order
-      const createdDate = created ? (created as ICAL.Time).toJSDate() : new Date();
-      let parsedSortOrder: number;
-      if (sortOrder !== null && sortOrder !== undefined) {
-        parsedSortOrder = parseInt(sortOrder as string, 10);
-        if (isNaN(parsedSortOrder)) {
-          parsedSortOrder = toAppleEpoch(createdDate.getTime());
-        }
+      
+      // Calculate sort order
+      const createdDate = parsed.created || new Date();
+      let sortOrder: number;
+      if (parsed.sortOrder !== undefined && !isNaN(parsed.sortOrder)) {
+        sortOrder = parsed.sortOrder;
       } else {
-        parsedSortOrder = toAppleEpoch(createdDate.getTime());
+        sortOrder = toAppleEpoch(createdDate.getTime());
       }
-
+      
       tasks.push({
         id: uuidv4(),
-        uid: uid || uuidv4(),
-        title: summary || 'Untitled Task',
-        description: description || '',
-        completed: status === 'COMPLETED',
-        completedAt: completed ? (completed as ICAL.Time).toJSDate() : undefined,
-        priority: icalToPriority(priority || 0),
-        categoryId: categories || undefined,
-        startDate: dtstart ? (dtstart as ICAL.Time).toJSDate() : undefined,
-        dueDate: due ? (due as ICAL.Time).toJSDate() : undefined,
+        uid: parsed.uid || uuidv4(),
+        title: parsed.summary || 'Untitled Task',
+        description: parsed.description || '',
+        completed: parsed.status === 'COMPLETED',
+        completedAt: parsed.completed,
+        priority: icalToPriority(parsed.priority || 0),
+        categoryId: parsed.categories?.join(',') || undefined,
+        startDate: parsed.dtstart,
+        dueDate: parsed.due,
         createdAt: createdDate,
-        modifiedAt: lastModified ? (lastModified as ICAL.Time).toJSDate() : new Date(),
+        modifiedAt: parsed.lastModified || new Date(),
         subtasks,
-        parentUid,
-        isCollapsed,
-        sortOrder: parsedSortOrder,
+        parentUid: parsed.parentUid,
+        isCollapsed: parsed.isCollapsed || false,
+        sortOrder,
         synced: false,
       });
     }
@@ -429,13 +641,13 @@ export function parseIcsFile(icsContent: string): Partial<Task>[] {
 }
 
 /**
- * parse a JSON file containing tasks (exported from this app)
+ * Parse a JSON file containing tasks (exported from this app)
  */
 export function parseJsonTasksFile(jsonContent: string): Partial<Task>[] {
   try {
     const data = JSON.parse(jsonContent);
     
-    // handle array of tasks directly
+    // Handle array of tasks directly
     if (Array.isArray(data)) {
       return data.map(task => ({
         ...task,
@@ -449,74 +661,4 @@ export function parseJsonTasksFile(jsonContent: string): Partial<Task>[] {
     console.error('Error parsing JSON tasks file:', error);
     return [];
   }
-}
-
-/**
- * helper function to build a VTODO component
- */
-function buildVtodo(task: Task): ICAL.Component {
-  const vtodo = new ICAL.Component('vtodo');
-  
-  // required fields
-  vtodo.updatePropertyWithValue('uid', task.uid);
-  vtodo.updatePropertyWithValue('dtstamp', ICAL.Time.now());
-  vtodo.updatePropertyWithValue('created', ICAL.Time.fromJSDate(new Date(task.createdAt)));
-  vtodo.updatePropertyWithValue('last-modified', ICAL.Time.fromJSDate(new Date(task.modifiedAt)));
-
-  // title and description
-  vtodo.updatePropertyWithValue('summary', task.title);
-  if (task.description) {
-    vtodo.updatePropertyWithValue('description', task.description);
-  }
-
-  // status
-  vtodo.updatePropertyWithValue('status', task.completed ? 'COMPLETED' : 'NEEDS-ACTION');
-  if (task.completed && task.completedAt) {
-    vtodo.updatePropertyWithValue('completed', ICAL.Time.fromJSDate(new Date(task.completedAt)));
-  }
-
-  // priority
-  vtodo.updatePropertyWithValue('priority', priorityToIcal[task.priority]);
-
-  // dates
-  if (task.startDate) {
-    vtodo.updatePropertyWithValue('dtstart', ICAL.Time.fromJSDate(new Date(task.startDate)));
-  }
-  if (task.dueDate) {
-    vtodo.updatePropertyWithValue('due', ICAL.Time.fromJSDate(new Date(task.dueDate)));
-  }
-
-  // x-apple-sort-order for manual sorting
-  vtodo.updatePropertyWithValue('x-apple-sort-order', task.sortOrder.toString());
-
-  // category - properly encode multiple categories as separate values
-  if (task.categoryId) {
-    const categoryNames = task.categoryId.split(',').map(s => s.trim()).filter(Boolean);
-    if (categoryNames.length > 0) {
-      const categoriesProp = new ICAL.Property('categories', vtodo);
-      categoriesProp.setValues(categoryNames);
-      vtodo.addProperty(categoriesProp);
-    }
-  }
-
-  // parent-child relationship
-  if (task.parentUid) {
-    const relatedTo = new ICAL.Property('related-to', vtodo);
-    relatedTo.setValue(task.parentUid);
-    relatedTo.setParameter('reltype', 'PARENT');
-    vtodo.addProperty(relatedTo);
-  }
-
-  // collapsed state
-  if (task.isCollapsed) {
-    vtodo.updatePropertyWithValue('x-apple-collapsed', '1');
-  }
-
-  // legacy subtasks
-  if (task.subtasks.length > 0) {
-    const subtasksJson = JSON.stringify(task.subtasks);
-    vtodo.updatePropertyWithValue('x-caldav-tasks-subtasks', subtasksJson);
-  }
-
-  return vtodo;
 }
