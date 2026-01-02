@@ -25,18 +25,18 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.9.6",
-    "@tauri-apps/plugin-dialog": "^2.0.0",
-    "@tauri-apps/plugin-fs": "^2.0.0",
-    "@tauri-apps/plugin-http": "^2.0.0",
-    "@tauri-apps/plugin-shell": "^2.0.0",
+    "@tauri-apps/plugin-dialog": "^2.4.2",
+    "@tauri-apps/plugin-fs": "^2.4.4",
+    "@tauri-apps/plugin-http": "^2.5.4",
+    "@tauri-apps/plugin-shell": "^2.3.3",
     "@types/node": "^25.0.3",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.2",
-    "autoprefixer": "^10.4.16",
-    "postcss": "^8.4.33",
+    "autoprefixer": "^10.4.23",
+    "postcss": "^8.5.6",
     "tailwindcss": "^3.4.0",
-    "typescript": "^5.3.3",
+    "typescript": "^5.9.3",
     "vite": "^7.3.0"
   }
 }
