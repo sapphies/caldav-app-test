@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Upload, FileText, AlertCircle, Check } from 'lucide-react';
 import { useTaskStore } from '@/store/taskStore';
-import { parseIcsFile, parseJsonTasksFile } from '@/lib/ical';
-import { pluralize } from '@/lib/formatUtils';
+import { parseIcsFile, parseJsonTasksFile } from '../../utils/ical';
+import { pluralize } from '../../utils/format';
 import type { Task, Calendar } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 

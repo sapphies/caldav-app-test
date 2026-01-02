@@ -23,7 +23,7 @@ import { CalendarModal } from './modals/CalendarModal';
 import { CreateCalendarModal } from './modals/CreateCalendarModal';
 import { ExportModal } from './modals/ExportModal';
 import { caldavService } from '@/lib/caldav';
-import { getContrastTextColor } from '@/lib/colorUtils';
+import { getContrastTextColor } from '../utils/color';
 import { getIconByName } from './IconPicker';
 import { Tooltip } from './Tooltip';
 

@@ -1,6 +1,6 @@
 import { propfind, report, put, del, proppatch, mkcalendar, parseMultiStatus, type CalDAVCredentials } from './tauri-http';
 import { Account, Calendar, Task } from '@/types';
-import { taskToVTodo, vtodoToTask } from './ical';
+import { taskToVTodo, vtodoToTask } from '../utils/ical';
 
 interface AccountConnection {
   serverUrl: string;

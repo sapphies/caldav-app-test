@@ -5,7 +5,7 @@ import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
 import { useTaskStore } from '@/store/taskStore';
 import { useSettingsStore, type Theme, type StartOfWeek } from '@/store/settingsStore';
 import { useModalEscapeKey } from '@/hooks/useModalEscapeKey';
-import { downloadFile } from '@/lib/downloadUtils';
+import { downloadFile } from '../../utils/file';
 
 interface SettingsModalProps {
   onClose: () => void;

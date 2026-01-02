@@ -7,9 +7,9 @@ import {
   exportTasksAsJson,
   exportTasksAsMarkdown,
   exportTasksAsCsv,
-} from '@/lib/ical';
-import { downloadFile } from '@/lib/downloadUtils';
-import { pluralize } from '@/lib/formatUtils';
+} from '../../utils/ical';
+import { downloadFile } from '../../utils/file';
+import { pluralize } from '../../utils/format';
 import { Task, Calendar } from '@/types';
 
 type ExportFormat = 'ics' | 'json' | 'markdown' | 'csv';

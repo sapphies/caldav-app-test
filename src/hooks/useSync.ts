@@ -7,7 +7,7 @@ import { useSettingsStore } from '@/store/settingsStore';
 import { caldavService } from '@/lib/caldav';
 import { Task, Calendar } from '@/types';
 import { useOffline } from './useOffline';
-import { generateTagColor } from '@/lib/colorUtils';
+import { generateTagColor } from '../utils/color';
 
 export function useSync() {
   const {

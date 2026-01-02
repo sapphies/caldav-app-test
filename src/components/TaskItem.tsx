@@ -6,9 +6,9 @@ import { useTaskStore } from '@/store/taskStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { Task, Priority } from '@/types';
 import { ExportModal } from './modals/ExportModal';
-import { getContrastTextColor } from '@/lib/colorUtils';
+import { getContrastTextColor } from '../utils/color';
 import { useContextMenu } from '@/hooks/useContextMenu';
-import { pluralize } from '@/lib/formatUtils';
+import { pluralize } from '../utils/format';
 import { getIconByName } from './IconPicker';
 
 interface TaskItemProps {

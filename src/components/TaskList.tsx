@@ -19,7 +19,7 @@ import {
 import { useTaskStore } from '@/store/taskStore';
 import { TaskItem } from './TaskItem';
 import { ListTodo, Plus } from 'lucide-react';
-import { flattenTasks, FlattenedTask } from '@/lib/treeUtils';
+import { flattenTasks, FlattenedTask } from '../utils/tree';
 
 // pixels of horizontal drag per indent level
 const INDENT_SHIFT_SIZE = 28;

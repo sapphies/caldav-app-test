@@ -14,7 +14,7 @@ import { useTaskStore } from '@/store/taskStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { Task, Priority } from '@/types';
 import { DateTimePicker } from './DateTimePicker';
-import { getContrastTextColor } from '@/lib/colorUtils';
+import { getContrastTextColor } from '../utils/color';
 import { getIconByName } from './IconPicker';
 
 interface TaskEditorProps {

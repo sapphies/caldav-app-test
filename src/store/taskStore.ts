@@ -10,8 +10,8 @@ import {
   Priority,
   Subtask,
 } from '@/types';
-import { toAppleEpoch } from '@/lib/ical';
-import { FlattenedTask } from '@/lib/treeUtils';
+import { toAppleEpoch } from '../utils/ical';
+import { FlattenedTask } from '../utils/tree';
 
 // represents a task pending deletion from the server
 interface PendingDeletion {
