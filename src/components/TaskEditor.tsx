@@ -13,6 +13,7 @@ import { useSettingsStore } from '@/store/settingsStore';
 import { Task, Priority } from '@/types';
 import { DateTimePicker } from './DateTimePicker';
 import { getContrastTextColor } from '../utils/color';
+import { useConfirmTaskDelete } from '@/hooks/useConfirmTaskDelete';
 import { getIconByName } from './IconPicker';
 
 interface TaskEditorProps {
@@ -29,7 +30,6 @@ const priorities: { value: Priority; label: string; color: string; borderColor: 
 export function TaskEditor({ task }: TaskEditorProps) {
   const {
     updateTask,
-    deleteTask,
     setEditorOpen,
     tags,
     updateSubtask,
@@ -43,6 +43,7 @@ export function TaskEditor({ task }: TaskEditorProps) {
     getTagById,
   } = useTaskStore();
   const { accentColor } = useSettingsStore();
+  const { confirmAndDelete } = useConfirmTaskDelete();
 
   // get contrast color for checkbox checkmarks
   const checkmarkColor = getContrastTextColor(accentColor);
@@ -103,9 +104,11 @@ export function TaskEditor({ task }: TaskEditorProps) {
     }
   };
 
-  const handleDelete = () => {
-    deleteTask(task.id);
-    setEditorOpen(false);
+  const handleDelete = async () => {
+    const deleted = await confirmAndDelete(task.id);
+    if (deleted) {
+      setEditorOpen(false);
+    }
   };
 
   return (
@@ -326,7 +329,7 @@ export function TaskEditor({ task }: TaskEditorProps) {
                   {childTask.title}
                 </span>
                 <button
-                  onClick={() => deleteTask(childTask.id)}
+                  onClick={() => confirmAndDelete(childTask.id)}
                   className="opacity-0 group-hover:opacity-100 p-1 text-surface-400 hover:text-red-500 dark:hover:text-red-400 transition-all"
                 >
                   <X className="w-4 h-4" />

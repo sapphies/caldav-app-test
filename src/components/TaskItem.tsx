@@ -14,6 +14,7 @@ import { Task, Priority } from '@/types';
 import { ExportModal } from './modals/ExportModal';
 import { getContrastTextColor } from '../utils/color';
 import { useContextMenu } from '@/hooks/useContextMenu';
+import { useConfirmTaskDelete } from '@/hooks/useConfirmTaskDelete';
 import { pluralize } from '../utils/format';
 import { getIconByName } from './IconPicker';
 
@@ -55,7 +56,6 @@ export function TaskItem({ task, depth, ancestorIds, isDragEnabled, isOverlay }:
     toggleTaskComplete, 
     setSelectedTask, 
     selectedTaskId, 
-    deleteTask,
     countChildren,
     toggleTaskCollapsed,
     exportTaskAndChildren,
@@ -65,6 +65,7 @@ export function TaskItem({ task, depth, ancestorIds, isDragEnabled, isOverlay }:
   const { accentColor } = useSettingsStore();
   const { contextMenu, handleContextMenu, handleCloseContextMenu, setContextMenu } = useContextMenu();
   const [showExportModal, setShowExportModal] = useState(false);
+  const { confirmAndDelete } = useConfirmTaskDelete();
 
   // get contrast color for checkbox checkmark
   const checkmarkColor = getContrastTextColor(accentColor);
@@ -110,9 +111,13 @@ export function TaskItem({ task, depth, ancestorIds, isDragEnabled, isOverlay }:
     toggleTaskComplete(task.id);
   };
 
-  const handleDelete = () => {
-    deleteTask(task.id);
+  const handleDelete = async () => {
+    // Close context menu before opening the confirm dialog so Esc only targets the dialog
     setContextMenu(null);
+    const deleted = await confirmAndDelete(task.id);
+    if (deleted) {
+      setContextMenu(null);
+    }
   };
 
   const handleExport = () => {

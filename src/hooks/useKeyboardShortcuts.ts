@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from 'react';
 import { useTaskStore } from '@/store/taskStore';
 import { getAltKeyLabel, getMetaKeyLabel, getModifierJoiner, getShiftKeyLabel } from '../utils/keyboard';
+import { useConfirmTaskDelete } from '@/hooks/useConfirmTaskDelete';
 import { KeyboardShortcut } from '@/store/settingsStore';
 
 interface ShortcutAction {
@@ -24,13 +25,14 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
     addTask,
     setSearchQuery,
     selectedTaskId,
-    deleteTask,
     toggleTaskComplete,
     setSelectedTask,
     setEditorOpen,
     getFilteredTasks,
     getSortedTasks,
   } = useTaskStore();
+  const { confirmAndDelete } = useConfirmTaskDelete();
+  
 
   const handleNewTask = useCallback(() => {
     const task = addTask({ title: '' });
@@ -42,11 +44,11 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
     searchInput?.focus();
   }, []);
 
-  const handleDelete = useCallback(() => {
+  const handleDelete = useCallback(async () => {
     if (selectedTaskId) {
-      deleteTask(selectedTaskId);
+      await confirmAndDelete(selectedTaskId);
     }
-  }, [selectedTaskId, deleteTask]);
+  }, [selectedTaskId, confirmAndDelete]);
 
   const handleToggleComplete = useCallback(() => {
     if (selectedTaskId) {
