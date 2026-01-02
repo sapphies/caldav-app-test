@@ -1,5 +1,4 @@
 import { useSortable } from '@dnd-kit/sortable';
-import { format, isToday, isTomorrow, isPast, isThisWeek } from 'date-fns';
 import Calendar from 'lucide-react/icons/calendar';
 import CheckCircle2 from 'lucide-react/icons/check-circle-2';
 import ChevronRight from 'lucide-react/icons/chevron-right';
@@ -17,6 +16,7 @@ import { useContextMenu } from '@/hooks/useContextMenu';
 import { useConfirmTaskDelete } from '@/hooks/useConfirmTaskDelete';
 import { pluralize } from '../utils/format';
 import { getIconByName } from './IconPicker';
+import { formatDueDate } from '@/utils/date';
 
 interface TaskItemProps {
   task: Task;
@@ -32,24 +32,6 @@ const priorityColors: Record<Priority, string> = {
   low: 'border-blue-400 bg-blue-50 dark:bg-blue-900/30',
   none: 'border-transparent',
 };
-
-function formatDueDate(date: Date): { text: string; className: string } {
-  const d = new Date(date);
-  
-  if (isPast(d) && !isToday(d)) {
-    return { text: format(d, 'MMM d'), className: 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30' };
-  }
-  if (isToday(d)) {
-    return { text: 'Today', className: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30' };
-  }
-  if (isTomorrow(d)) {
-    return { text: 'Tomorrow', className: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30' };
-  }
-  if (isThisWeek(d)) {
-    return { text: format(d, 'EEEE'), className: 'text-surface-600 dark:text-surface-400 bg-surface-100 dark:bg-surface-700' };
-  }
-  return { text: format(d, 'MMM d'), className: 'text-surface-600 dark:text-surface-400 bg-surface-100 dark:bg-surface-700' };
-}
 
 export function TaskItem({ task, depth, ancestorIds, isDragEnabled, isOverlay }: TaskItemProps) {
   const { 
