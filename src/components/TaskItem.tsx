@@ -37,10 +37,12 @@ export function TaskItem({ task, depth, ancestorIds, isDragEnabled, isOverlay }:
   const { 
     toggleTaskComplete, 
     setSelectedTask, 
-    selectedTaskId, 
+    selectedTaskId,
     countChildren,
     toggleTaskCollapsed,
     exportTaskAndChildren,
+    accounts,
+    activeCalendarId,
     setActiveTag,
     getTagById,
   } = useTaskStore();
@@ -78,6 +80,10 @@ export function TaskItem({ task, depth, ancestorIds, isDragEnabled, isOverlay }:
 
   const isSelected = selectedTaskId === task.id;
   const taskTags = (task.tags || []).map(tagId => getTagById(tagId)).filter(Boolean);
+  const calendar = accounts.flatMap((a) => a.calendars).find((c) => c.id === task.calendarId);
+  const showCalendar = activeCalendarId === null && calendar;
+  const calendarColor = calendar?.color ?? '#475569';
+  const dueDateDisplay = task.dueDate ? formatDueDate(task.dueDate) : null;
 
   const handleClick = (e: React.MouseEvent) => {
     // don't select if clicking the checkbox or collapse button
@@ -161,7 +167,7 @@ export function TaskItem({ task, depth, ancestorIds, isDragEnabled, isOverlay }:
             </div>
           )}
 
-          {(taskTags.length > 0 || task.dueDate || totalSubtasks > 0 || childCount > 0) && (
+          {(taskTags.length > 0 || showCalendar || task.dueDate || totalSubtasks > 0 || childCount > 0) && (
             <div className="flex items-center gap-2 mt-2 flex-wrap">
               {taskTags.map((tag) => {
                 if (!tag) return null;
@@ -185,10 +191,20 @@ export function TaskItem({ task, depth, ancestorIds, isDragEnabled, isOverlay }:
                 );
               })}
 
-              {task.dueDate && (
-                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs ${formatDueDate(task.dueDate).className}`}>
+              {showCalendar && (
+                <span
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+                  style={{ backgroundColor: `${calendarColor}20`, color: calendarColor }}
+                >
                   <Calendar className="w-3 h-3" />
-                  {formatDueDate(task.dueDate).text}
+                  {calendar?.displayName || 'Calendar'}
+                </span>
+              )}
+
+              {dueDateDisplay && (
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs ${dueDateDisplay.className}`}>
+                  <Calendar className="w-3 h-3" />
+                  {dueDateDisplay.text}
                 </span>
               )}
 
