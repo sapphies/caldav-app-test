@@ -4,6 +4,7 @@ import { getAltKeyLabel, getMetaKeyLabel, getModifierJoiner, getShiftKeyLabel } 
 import { useConfirmTaskDelete } from '@/hooks/useConfirmTaskDelete';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { KeyboardShortcut } from '@/store/settingsStore';
+import { getIsKeyboardDragging } from '@/lib/dragState';
 
 interface ShortcutAction {
   key: string;
@@ -205,6 +206,12 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
         if (e.key === 'Escape' || e.key === 'Enter') {
           e.preventDefault();
         }
+        return;
+      }
+
+      // if keyboard dragging is in progress (via dnd-kit KeyboardSensor),
+      // let dnd-kit handle all keyboard events (arrow keys, enter, escape)
+      if (getIsKeyboardDragging()) {
         return;
       }
       
