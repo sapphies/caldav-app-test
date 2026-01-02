@@ -5,6 +5,30 @@ export type Theme = 'light' | 'dark' | 'system';
 export type AccentColor = string;
 export type StartOfWeek = 'sunday' | 'monday';
 
+export interface KeyboardShortcut {
+  id: string;
+  key: string;
+  ctrl?: boolean;
+  meta?: boolean;
+  shift?: boolean;
+  alt?: boolean;
+  description: string;
+}
+
+export const defaultShortcuts: KeyboardShortcut[] = [
+  { id: 'new-task', key: 'n', meta: true, description: 'Create new task' },
+  { id: 'search', key: 'f', meta: true, description: 'Focus search' },
+  { id: 'settings', key: ',', meta: true, description: 'Open settings' },
+  { id: 'sync', key: 'r', meta: true, description: 'Sync with server' },
+  { id: 'delete', key: 'Backspace', meta: true, description: 'Delete selected task' },
+  { id: 'toggle-complete', key: 'Enter', description: 'Toggle task completion' },
+  { id: 'close', key: 'Escape', description: 'Close editor / Clear search' },
+  { id: 'nav-up', key: 'ArrowUp', description: 'Navigate to previous task' },
+  { id: 'nav-down', key: 'ArrowDown', description: 'Navigate to next task' },
+  { id: 'nav-up-vim', key: 'k', description: 'Navigate to previous task (vim)' },
+  { id: 'nav-down-vim', key: 'j', description: 'Navigate to next task (vim)' },
+];
+
 interface SettingsStore {
   theme: Theme;
   accentColor: AccentColor;

@@ -26,6 +26,7 @@ import { caldavService } from '@/lib/caldav';
 import { getContrastTextColor } from '../utils/color';
 import { getIconByName } from './IconPicker';
 import { Tooltip } from './Tooltip';
+import { getMetaKeyLabel, getModifierJoiner } from '../utils/keyboard';
 
 interface SidebarProps {
   onOpenSettings?: () => void;
@@ -70,6 +71,9 @@ export function Sidebar({ onOpenSettings, onOpenImport }: SidebarProps) {
     x: number;
     y: number;
   } | null>(null);
+  const metaKey = getMetaKeyLabel();
+  const modifierJoiner = getModifierJoiner();
+  const settingsShortcut = `${metaKey}${modifierJoiner},`;
 
   const toggleAccount = (id: string) => {
     const next = new Set(expandedAccounts);
@@ -329,7 +333,7 @@ export function Sidebar({ onOpenSettings, onOpenImport }: SidebarProps) {
           >
             <Settings className="w-4 h-4" />
             Settings
-            <span className="ml-auto text-xs text-surface-400">⌘,</span>
+            <span className="ml-auto text-xs text-surface-400">{settingsShortcut}</span>
           </button>
         </div>
       </div>

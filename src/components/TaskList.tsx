@@ -21,6 +21,7 @@ import { TaskItem } from './TaskItem';
 import ListTodo from 'lucide-react/icons/list-todo';
 import Plus from 'lucide-react/icons/plus';
 import { flattenTasks, FlattenedTask } from '../utils/tree';
+import { getMetaKeyLabel, getModifierJoiner } from '../utils/keyboard';
 
 // pixels of horizontal drag per indent level
 const INDENT_SHIFT_SIZE = 28;
@@ -238,6 +239,11 @@ export function TaskList() {
     setSelectedTask(task.id);
   };
 
+  const metaKey = getMetaKeyLabel();
+  const modifierJoiner = getModifierJoiner();
+  const newTaskShortcut = `${metaKey}${modifierJoiner}N`;
+
+
   // only enable dragging for manual/smart sort modes
   const isDragEnabled = sortConfig.mode === 'manual' || sortConfig.mode === 'smart';
 
@@ -253,7 +259,7 @@ export function TaskList() {
         <p className="text-surface-500 dark:text-surface-400 mb-6 max-w-sm">
           {isSearching 
             ? 'No tasks match your search query. Try adjusting your search terms.'
-            : <>Create your first task to get started. Press <kbd className="px-2 py-1 bg-surface-100 dark:bg-surface-700 rounded text-sm font-mono">⌘N</kbd> or click the button below.</>
+            : <>Create your first task to get started. Press <kbd className="px-2 py-1 bg-surface-100 dark:bg-surface-700 rounded text-sm font-mono">{newTaskShortcut}</kbd> or click the button below.</>
           }
         </p>
         {!isSearching && (

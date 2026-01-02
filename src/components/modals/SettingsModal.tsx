@@ -15,9 +15,10 @@ import Settings from 'lucide-react/icons/settings';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
 import { useTaskStore } from '@/store/taskStore';
-import { useSettingsStore, type Theme, type StartOfWeek } from '@/store/settingsStore';
+import { useSettingsStore, type Theme, type StartOfWeek, type KeyboardShortcut } from '@/store/settingsStore';
 import { useModalEscapeKey } from '@/hooks/useModalEscapeKey';
 import { downloadFile } from '../../utils/file';
+import { getMetaKeyLabel, getAltKeyLabel, getShiftKeyLabel } from '../../utils/keyboard';
 
 interface SettingsModalProps {
   onClose: () => void;
@@ -35,17 +36,7 @@ const accentColors = [
   { name: 'Teal', value: '#14b8a6' },
 ];
 
-const shortcuts = [
-  { keys: ['⌘', 'N'], description: 'Create new task' },
-  { keys: ['⌘', 'F'], description: 'Search tasks' },
-  { keys: ['⌘', 'R'], description: 'Sync with server' },
-  { keys: ['⌘', ','], description: 'Open settings' },
-  { keys: ['Escape'], description: 'Close editor/modal' },
-  { keys: ['⌘', 'Enter'], description: 'Save and close task' },
-  { keys: ['⌘', 'Backspace'], description: 'Delete selected task' },
-  { keys: ['↑', '↓'], description: 'Navigate tasks' },
-  { keys: ['Space'], description: 'Toggle task complete' },
-];
+const metaKeyLabel = getMetaKeyLabel();
 
 export function SettingsModal({ onClose }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>('appearance');
@@ -473,37 +464,56 @@ function SyncSettings({ accounts }: { accounts: { id: string; name: string }[] }
 }
 
 function ShortcutsSettings() {
-  return (
-    <div className="space-y-4">
-      <h3 className="text-sm font-medium text-surface-800 dark:text-surface-200">Keyboard Shortcuts</h3>
-      
-      <div className="space-y-2">
-        {shortcuts.map((shortcut, index) => (
-          <div
-            key={index}
-            className="flex items-center justify-between py-2 border-b border-surface-100 dark:border-surface-700 last:border-0"
-          >
-            <span className="text-sm text-surface-600 dark:text-surface-400">{shortcut.description}</span>
-            <div className="flex items-center gap-1">
-              {shortcut.keys.map((key, keyIndex) => (
-                <span key={keyIndex}>
-                  <kbd className="px-2 py-1 bg-surface-100 dark:bg-surface-700 border border-surface-200 dark:border-surface-600 rounded text-xs font-mono text-surface-700 dark:text-surface-300">
-                    {key}
-                  </kbd>
-                  {keyIndex < shortcut.keys.length - 1 && (
-                    <span className="text-surface-400 mx-1">+</span>
-                  )}
-                </span>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
+  const { keyboardShortcuts } = useSettingsStore();
 
-      <p className="text-xs text-surface-500 dark:text-surface-400 mt-4">
-        On Windows/Linux, use Ctrl instead of ⌘.
-      </p>
-    </div>
+  const formatShortcut = (shortcut: KeyboardShortcut | Partial<KeyboardShortcut>): string => {
+    const parts: string[] = [];
+    if (shortcut.meta) parts.push(metaKeyLabel);
+    if (shortcut.ctrl && !shortcut.meta) parts.push('Ctrl');
+    if (shortcut.shift) parts.push(getShiftKeyLabel());
+    if (shortcut.alt) parts.push(getAltKeyLabel());
+    if (shortcut.key) {
+      const keyDisplay = shortcut.key === ' ' ? 'Space' : 
+                        shortcut.key.length === 1 ? shortcut.key.toUpperCase() : shortcut.key;
+      parts.push(keyDisplay);
+    }
+    return parts.join(' + ') || 'Press keys...';
+  };
+  
+  return (
+    <>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-medium text-surface-800 dark:text-surface-200">Keyboard Shortcuts</h3>
+        </div>
+        
+        <div className="space-y-1 rounded-lg border border-surface-200 dark:border-surface-700 overflow-hidden">
+          {keyboardShortcuts.map((shortcut) => (
+            <div
+              key={shortcut.id}
+              className="flex items-center justify-between py-2 px-3 bg-white dark:bg-surface-800 border-b border-surface-100 dark:border-surface-700 last:border-0"
+            >
+              <span className="text-sm text-surface-600 dark:text-surface-400">{shortcut.description}</span>
+              
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
+                  {formatShortcut(shortcut).split(' + ').map((key, keyIndex, arr) => (
+                    <span key={keyIndex} className="flex items-center">
+                      <kbd className="px-2 py-1 bg-surface-100 dark:bg-surface-700 border border-surface-200 dark:border-surface-600 rounded text-xs font-mono text-surface-700 dark:text-surface-300">
+                        {key}
+                      </kbd>
+                      {keyIndex < arr.length - 1 && (
+                        <span className="text-surface-400 mx-0.5">+</span>
+                      )}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
   );
 }
 

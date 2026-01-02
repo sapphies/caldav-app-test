@@ -11,6 +11,7 @@ import WifiOff from 'lucide-react/icons/wifi-off';
 import { useTaskStore } from '@/store/taskStore';
 import { SortMode } from '@/types';
 import { Tooltip } from './Tooltip';
+import { getMetaKeyLabel, getModifierJoiner } from '../utils/keyboard';
 
 const sortOptions: { value: SortMode; label: string }[] = [
   { value: 'manual', label: 'Manual' },
@@ -43,6 +44,10 @@ export function Header({ isSyncing = false, isOffline = false, lastSyncTime, onS
   } = useTaskStore();
 
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const metaKey = getMetaKeyLabel();
+  const modifierJoiner = getModifierJoiner();
+  const searchShortcut = `${metaKey}${modifierJoiner}F`;
+  const syncShortcut = `${metaKey}${modifierJoiner}R`;
 
   // handle ESC key to close sort dropdown
   useEffect(() => {
@@ -80,7 +85,7 @@ export function Header({ isSyncing = false, isOffline = false, lastSyncTime, onS
           <input
             type="text"
             data-search-input
-            placeholder="Search tasks... (⌘F)"
+            placeholder={`Search tasks... (${searchShortcut})`}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-4 py-2 bg-surface-100 dark:bg-surface-700 border border-transparent rounded-lg text-sm text-surface-800 dark:text-surface-200 placeholder:text-surface-400 focus:outline-none focus:border-primary-300 focus:bg-white dark:focus:bg-surface-600 transition-colors"
@@ -102,7 +107,7 @@ export function Header({ isSyncing = false, isOffline = false, lastSyncTime, onS
                   ? 'Cannot sync while offline' 
                   : lastSyncTime 
                     ? `Last synced ${formatDistanceToNow(lastSyncTime, { addSuffix: true })}` 
-                    : 'Sync with server (⌘R)'
+                    : `Sync with server (${syncShortcut})`
               }
               position="bottom"
             >

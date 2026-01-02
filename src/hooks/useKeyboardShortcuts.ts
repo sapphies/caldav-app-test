@@ -1,5 +1,7 @@
 import { useEffect, useCallback } from 'react';
 import { useTaskStore } from '@/store/taskStore';
+import { getAltKeyLabel, getMetaKeyLabel, getModifierJoiner, getShiftKeyLabel } from '../utils/keyboard';
+import { KeyboardShortcut } from '@/store/settingsStore';
 
 interface ShortcutAction {
   key: string;
@@ -243,25 +245,24 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
   return { shortcuts };
 }
 
-export function getShortcutDisplay(shortcut: ShortcutAction): string {
+export function getShortcutDisplay(shortcut: KeyboardShortcut): string {
   const parts: string[] = [];
-  const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
   if (shortcut.meta) {
-    parts.push(isMac ? '⌘' : 'Ctrl');
+    parts.push(getMetaKeyLabel());
   }
   if (shortcut.ctrl && !shortcut.meta) {
     parts.push('Ctrl');
   }
   if (shortcut.shift) {
-    parts.push(isMac ? '⇧' : 'Shift');
+    parts.push(getShiftKeyLabel());
   }
   if (shortcut.alt) {
-    parts.push(isMac ? '⌥' : 'Alt');
+    parts.push(getAltKeyLabel());
   }
 
   const keyDisplay = shortcut.key === ' ' ? 'Space' : shortcut.key.toUpperCase();
   parts.push(keyDisplay);
 
-  return parts.join(isMac ? '' : '+');
+  return parts.join(getModifierJoiner());
 }
