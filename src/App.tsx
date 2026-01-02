@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useSync } from '@/hooks/useSync';
 import { useTheme } from '@/hooks/useTheme';
@@ -10,11 +10,18 @@ import { TaskEditor } from '@/components/TaskEditor';
 import { Header } from '@/components/Header';
 import { SettingsModal } from '@/components/modals/SettingsModal';
 import { ImportModal } from '@/components/modals/ImportModal';
+import { initWebKitDragFix } from './utils/webkit';
 
 function App() {
+  // Initialize WebKit drag-and-drop fix for Safari/Tauri
+  useEffect(() => {
+    initWebKitDragFix();
+  }, []);
+  
   const [showSettings, setShowSettings] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [preloadedFile, setPreloadedFile] = useState<{ name: string; content: string } | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
   const { isSyncing, isOffline, lastSyncTime, syncAll } = useSync();
   
   useTheme();
@@ -33,6 +40,7 @@ function App() {
   const handleFileDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    setIsDragOver(false);
 
     const file = e.dataTransfer?.files?.[0];
     if (!file) return;
@@ -69,6 +77,21 @@ function App() {
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) {
+      setIsDragOver(false);
+    }
   }, []);
 
   // reset preloaded file when import modal closes
@@ -91,7 +114,17 @@ function App() {
       onContextMenu={handleContextMenu}
       onDrop={handleFileDrop}
       onDragOver={handleDragOver}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
     >
+      {isDragOver && (
+        <div className="pointer-events-none fixed inset-0 z-[60] flex items-center justify-center bg-primary-600/10 backdrop-blur-sm">
+          <div className="px-4 py-3 rounded-lg bg-white/90 dark:bg-surface-800/90 text-sm font-medium text-surface-800 dark:text-surface-200 shadow-lg border border-primary-200 dark:border-primary-800">
+            Drop .ics or .json files anywhere to import tasks
+          </div>
+        </div>
+      )}
+
       <Sidebar 
         onOpenSettings={() => setShowSettings(true)} 
         onOpenImport={() => setShowImport(true)}
