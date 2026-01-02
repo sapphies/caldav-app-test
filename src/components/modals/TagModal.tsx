@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X } from 'lucide-react';
+import X from 'lucide-react/icons/x';
 import { useTaskStore } from '@/store/taskStore';
 import { useModalEscapeKey } from '@/hooks/useModalEscapeKey';
 import { IconPicker, getIconByName } from '../IconPicker';

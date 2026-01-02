@@ -18,7 +18,8 @@ import {
 } from '@dnd-kit/sortable';
 import { useTaskStore } from '@/store/taskStore';
 import { TaskItem } from './TaskItem';
-import { ListTodo, Plus } from 'lucide-react';
+import ListTodo from 'lucide-react/icons/list-todo';
+import Plus from 'lucide-react/icons/plus';
 import { flattenTasks, FlattenedTask } from '../utils/tree';
 
 // pixels of horizontal drag per indent level

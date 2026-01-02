@@ -1,5 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Upload, FileText, AlertCircle, Check } from 'lucide-react';
+import X from 'lucide-react/icons/x';
+import Upload from 'lucide-react/icons/upload';
+import FileText from 'lucide-react/icons/file-text';
+import AlertCircle from 'lucide-react/icons/alert-circle';
+import Check from 'lucide-react/icons/check';
 import { useTaskStore } from '@/store/taskStore';
 import { parseIcsFile, parseJsonTasksFile } from '../../utils/ical';
 import { pluralize } from '../../utils/format';

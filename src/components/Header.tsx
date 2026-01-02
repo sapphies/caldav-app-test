@@ -1,15 +1,13 @@
 import { useState, useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import {
-  Search,
-  Plus,
-  SortAsc,
-  SortDesc,
-  RefreshCw,
-  Eye,
-  EyeOff,
-  WifiOff,
-} from 'lucide-react';
+import Search from 'lucide-react/icons/search';
+import Plus from 'lucide-react/icons/plus';
+import SortAsc from 'lucide-react/icons/arrow-up-narrow-wide';
+import SortDesc from 'lucide-react/icons/arrow-down-wide-narrow';
+import RefreshCw from 'lucide-react/icons/refresh-cw';
+import Eye from 'lucide-react/icons/eye';
+import EyeOff from 'lucide-react/icons/eye-off';
+import WifiOff from 'lucide-react/icons/wifi-off';
 import { useTaskStore } from '@/store/taskStore';
 import { SortMode } from '@/types';
 import { Tooltip } from './Tooltip';

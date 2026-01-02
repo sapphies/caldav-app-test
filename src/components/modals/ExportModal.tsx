@@ -1,5 +1,10 @@
 import { useState } from 'react';
-import { Download, Copy, CheckCircle2, AlertCircle, ChevronDown, X } from 'lucide-react';
+import Download from 'lucide-react/icons/download';
+import Copy from 'lucide-react/icons/copy';
+import CheckCircle2 from 'lucide-react/icons/check-circle-2';
+import AlertCircle from 'lucide-react/icons/alert-circle';
+import ChevronDown from 'lucide-react/icons/chevron-down';
+import X from 'lucide-react/icons/x';
 import { save } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
 import { 
@@ -11,6 +16,7 @@ import {
 import { downloadFile } from '../../utils/file';
 import { pluralize } from '../../utils/format';
 import { Task, Calendar } from '@/types';
+import { useModalEscapeKey } from '@/hooks/useModalEscapeKey';
 
 type ExportFormat = 'ics' | 'json' | 'markdown' | 'csv';
 type ExportType = 'tasks' | 'all-calendars' | 'single-calendar';
@@ -30,6 +36,8 @@ export function ExportModal({ tasks, fileName = 'export', type = 'tasks', calend
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+
+  useModalEscapeKey(onClose);
 
   // calculate subtask count based on array length (for flattened task hierarchies)
   // when tasks are passed with descendants, count all items after the first one

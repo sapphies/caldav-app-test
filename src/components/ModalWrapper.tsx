@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { X } from 'lucide-react';
+import X from 'lucide-react/icons/x';
 
 interface ModalWrapperProps {
   isOpen?: boolean;

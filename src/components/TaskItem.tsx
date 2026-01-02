@@ -1,6 +1,12 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { format, isToday, isTomorrow, isPast, isThisWeek } from 'date-fns';
-import { Calendar, CheckCircle2, ChevronRight, ChevronDown, Trash2, Edit2, Share2 } from 'lucide-react';
+import Calendar from 'lucide-react/icons/calendar';
+import CheckCircle2 from 'lucide-react/icons/check-circle-2';
+import ChevronRight from 'lucide-react/icons/chevron-right';
+import ChevronDown from 'lucide-react/icons/chevron-down';
+import Trash2 from 'lucide-react/icons/trash-2';
+import Edit2 from 'lucide-react/icons/edit-2';
+import Share2 from 'lucide-react/icons/share-2';
 import { useState } from 'react';
 import { useTaskStore } from '@/store/taskStore';
 import { useSettingsStore } from '@/store/settingsStore';

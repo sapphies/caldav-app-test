@@ -1,5 +1,17 @@
 import { useState } from 'react';
-import { X, Keyboard, RefreshCw, Palette, Info, Moon, Sun, Monitor, Download, Upload, Bell, Database, Settings } from 'lucide-react';
+import X from 'lucide-react/icons/x';
+import Keyboard from 'lucide-react/icons/keyboard';
+import RefreshCw from 'lucide-react/icons/refresh-cw';
+import Palette from 'lucide-react/icons/palette';
+import Info from 'lucide-react/icons/info';
+import Moon from 'lucide-react/icons/moon';
+import Sun from 'lucide-react/icons/sun';
+import Monitor from 'lucide-react/icons/monitor';
+import Download from 'lucide-react/icons/download';
+import Upload from 'lucide-react/icons/upload';
+import Bell from 'lucide-react/icons/bell';
+import Database from 'lucide-react/icons/database';
+import Settings from 'lucide-react/icons/settings';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
 import { useTaskStore } from '@/store/taskStore';

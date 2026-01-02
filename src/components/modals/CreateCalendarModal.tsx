@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { X, Loader2 } from 'lucide-react';
+import X from 'lucide-react/icons/x';
+import Loader2 from 'lucide-react/icons/loader-2';
 import { useTaskStore } from '@/store/taskStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useModalEscapeKey } from '@/hooks/useModalEscapeKey';

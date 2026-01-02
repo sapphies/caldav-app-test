@@ -1,15 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { format } from 'date-fns';
-import {
-  X,
-  Trash2,
-  Calendar,
-  Clock,
-  Flag,
-  Plus,
-  CheckCircle2,
-  Tag,
-} from 'lucide-react';
+import X from 'lucide-react/icons/x';
+import Trash2 from 'lucide-react/icons/trash-2';
+import Calendar from 'lucide-react/icons/calendar';
+import Clock from 'lucide-react/icons/clock';
+import Flag from 'lucide-react/icons/flag';
+import Plus from 'lucide-react/icons/plus';
+import CheckCircle2 from 'lucide-react/icons/check-circle-2';
+import Tag from 'lucide-react/icons/tag';
 import { useTaskStore } from '@/store/taskStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { Task, Priority } from '@/types';

@@ -1,31 +1,29 @@
 import { useState } from 'react';
-import {
-  Calendar,
-  CheckSquare,
-  ListTodo,
-  Briefcase,
-  Home,
-  Heart,
-  Star,
-  Bookmark,
-  Target,
-  Zap,
-  Coffee,
-  Book,
-  GraduationCap,
-  Dumbbell,
-  ShoppingCart,
-  Car,
-  Plane,
-  Music,
-  Camera,
-  Gift,
-  Users,
-  Building2,
-  Wallet,
-  Clock,
-  type LucideIcon,
-} from 'lucide-react';
+import { type LucideIcon } from 'lucide-react';
+import Calendar from 'lucide-react/icons/calendar';
+import CheckSquare from 'lucide-react/icons/check-square';
+import ListTodo from 'lucide-react/icons/list-todo';
+import Briefcase from 'lucide-react/icons/briefcase';
+import Home from 'lucide-react/icons/home';
+import Heart from 'lucide-react/icons/heart';
+import Star from 'lucide-react/icons/star';
+import Bookmark from 'lucide-react/icons/bookmark';
+import Target from 'lucide-react/icons/target';
+import Zap from 'lucide-react/icons/zap';
+import Coffee from 'lucide-react/icons/coffee';
+import Book from 'lucide-react/icons/book';
+import GraduationCap from 'lucide-react/icons/graduation-cap';
+import Dumbbell from 'lucide-react/icons/dumbbell';
+import ShoppingCart from 'lucide-react/icons/shopping-cart';
+import Car from 'lucide-react/icons/car';
+import Plane from 'lucide-react/icons/plane';
+import Music from 'lucide-react/icons/music';
+import Camera from 'lucide-react/icons/camera';
+import Gift from 'lucide-react/icons/gift';
+import Users from 'lucide-react/icons/users';
+import Building2 from 'lucide-react/icons/building-2';
+import Wallet from 'lucide-react/icons/wallet';
+import Clock from 'lucide-react/icons/clock';
 
 export const calendarIcons: { name: string; icon: LucideIcon }[] = [
   { name: 'calendar', icon: Calendar },

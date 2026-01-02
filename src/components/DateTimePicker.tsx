@@ -1,6 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday } from 'date-fns';
-import { ChevronLeft, ChevronRight, X, Clock, Calendar as CalendarIcon } from 'lucide-react';
+import ChevronLeft from 'lucide-react/icons/chevron-left';
+import ChevronRight from 'lucide-react/icons/chevron-right';
+import X from 'lucide-react/icons/x';
+import Clock from 'lucide-react/icons/clock';
+import CalendarIcon from 'lucide-react/icons/calendar';
 
 interface DateTimePickerProps {
   value?: Date;
