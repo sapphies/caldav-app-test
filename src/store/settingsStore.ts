@@ -26,8 +26,6 @@ export const defaultShortcuts: KeyboardShortcut[] = [
   { id: 'close', key: 'Escape', description: 'Close editor / Clear search' },
   { id: 'nav-up', key: 'ArrowUp', description: 'Navigate to previous task' },
   { id: 'nav-down', key: 'ArrowDown', description: 'Navigate to next task' },
-  { id: 'nav-up-vim', key: 'k', description: 'Navigate to previous task (vim)' },
-  { id: 'nav-down-vim', key: 'j', description: 'Navigate to next task (vim)' },
 ];
 
 export type SubtaskDeletionBehavior = 'delete' | 'keep';
@@ -45,6 +43,7 @@ interface SettingsStore {
   notifications: boolean;
   notifyBefore: number; // minutes before due date
   defaultCalendarId: string | null; // default calendar for new tasks when in "All Tasks" view
+  keyboardShortcuts: KeyboardShortcut[];
   
   // Task defaults
   defaultPriority: Priority;
@@ -63,6 +62,9 @@ interface SettingsStore {
   setNotifications: (enabled: boolean) => void;
   setNotifyBefore: (minutes: number) => void;
   setDefaultCalendarId: (calendarId: string | null) => void;
+  setKeyboardShortcuts: (shortcuts: KeyboardShortcut[]) => void;
+  updateShortcut: (id: string, updates: Partial<KeyboardShortcut>) => void;
+  resetShortcuts: () => void;
   setDefaultPriority: (priority: Priority) => void;
   setDefaultTags: (tagIds: string[]) => void;
   exportSettings: () => string;
@@ -84,6 +86,7 @@ export const useSettingsStore = create<SettingsStore>()(
       notifications: true,
       notifyBefore: 15,
       defaultCalendarId: null,
+      keyboardShortcuts: defaultShortcuts,
       defaultPriority: 'none',
       defaultTags: [],
 
@@ -99,6 +102,14 @@ export const useSettingsStore = create<SettingsStore>()(
       setNotifications: (notifications) => set({ notifications }),
       setNotifyBefore: (notifyBefore) => set({ notifyBefore }),
       setDefaultCalendarId: (defaultCalendarId) => set({ defaultCalendarId }),
+      setKeyboardShortcuts: (keyboardShortcuts) => set({ keyboardShortcuts }),
+      updateShortcut: (id, updates) => {
+        const shortcuts = get().keyboardShortcuts.map((s) =>
+          s.id === id ? { ...s, ...updates } : s
+        );
+        set({ keyboardShortcuts: shortcuts });
+      },
+      resetShortcuts: () => set({ keyboardShortcuts: defaultShortcuts }),
       setDefaultPriority: (defaultPriority) => set({ defaultPriority }),
       setDefaultTags: (defaultTags) => set({ defaultTags }),
       
@@ -118,6 +129,7 @@ export const useSettingsStore = create<SettingsStore>()(
           notifications: state.notifications,
           notifyBefore: state.notifyBefore,
           defaultCalendarId: state.defaultCalendarId,
+          keyboardShortcuts: state.keyboardShortcuts,
           defaultPriority: state.defaultPriority,
           defaultTags: state.defaultTags,
         };
@@ -144,6 +156,7 @@ export const useSettingsStore = create<SettingsStore>()(
             notifications: data.notifications ?? true,
             notifyBefore: data.notifyBefore ?? 15,
             defaultCalendarId: data.defaultCalendarId ?? null,
+            keyboardShortcuts: data.keyboardShortcuts ?? defaultShortcuts,
             defaultPriority: data.defaultPriority ?? 'none',
             defaultTags: data.defaultTags ?? [],
           });
