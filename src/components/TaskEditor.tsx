@@ -8,6 +8,7 @@ import Flag from 'lucide-react/icons/flag';
 import Plus from 'lucide-react/icons/plus';
 import CheckCircle2 from 'lucide-react/icons/check-circle-2';
 import Tag from 'lucide-react/icons/tag';
+import FolderSync from 'lucide-react/icons/folder-sync';
 import { useTaskStore } from '@/store/taskStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { Task, Priority } from '@/types';
@@ -41,6 +42,7 @@ export function TaskEditor({ task }: TaskEditorProps) {
     addTagToTask,
     removeTagFromTask,
     getTagById,
+    accounts,
   } = useTaskStore();
   const { accentColor } = useSettingsStore();
   const { confirmAndDelete } = useConfirmTaskDelete();
@@ -55,6 +57,19 @@ export function TaskEditor({ task }: TaskEditorProps) {
   const childCount = countChildren(task.uid);
   const taskTags = (task.tags || []).map(tagId => getTagById(tagId)).filter(Boolean);
   const availableTags = tags.filter(t => !(task.tags || []).includes(t.id));
+
+  // Get current calendar info
+  const currentAccount = accounts.find(a => a.id === task.accountId);
+  const currentCalendar = currentAccount?.calendars.find(c => c.id === task.calendarId);
+  
+  // Get all available calendars for moving
+  const allCalendars = accounts.flatMap(account => 
+    account.calendars.map(cal => ({
+      ...cal,
+      accountId: account.id,
+      accountName: account.name,
+    }))
+  );
 
   // focus title on open if empty
   useEffect(() => {
@@ -73,6 +88,16 @@ export function TaskEditor({ task }: TaskEditorProps) {
 
   const handlePriorityChange = (priority: Priority) => {
     updateTask(task.id, { priority });
+  };
+
+  const handleCalendarChange = (calendarId: string) => {
+    const targetCalendar = allCalendars.find(c => c.id === calendarId);
+    if (targetCalendar) {
+      updateTask(task.id, { 
+        calendarId: targetCalendar.id,
+        accountId: targetCalendar.accountId,
+      });
+    }
   };
 
   const handleStartDateChange = (date: Date | undefined) => {
@@ -208,6 +233,33 @@ export function TaskEditor({ task }: TaskEditorProps) {
               </button>
             ))}
           </div>
+        </div>
+
+        <div>
+          <label className="flex items-center gap-2 text-sm font-medium text-surface-600 dark:text-surface-400 mb-2">
+            <FolderSync className="w-4 h-4" />
+            Calendar
+          </label>
+          <select
+            value={task.calendarId}
+            onChange={(e) => handleCalendarChange(e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-surface-200 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-800 dark:text-surface-200 rounded-lg focus:outline-none focus:border-primary-300 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/50"
+          >
+            {accounts.map((account) => (
+              <optgroup key={account.id} label={account.name}>
+                {account.calendars.map((cal) => (
+                  <option key={cal.id} value={cal.id}>
+                    {cal.displayName}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+          {currentCalendar && currentAccount && (
+            <p className="mt-1 text-xs text-surface-500 dark:text-surface-400">
+              Currently in: {currentAccount.name} / {currentCalendar.displayName}
+            </p>
+          )}
         </div>
 
         <div>
