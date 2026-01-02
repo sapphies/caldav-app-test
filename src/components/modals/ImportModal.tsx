@@ -29,6 +29,7 @@ export function ImportModal({ isOpen, onClose, preloadedFile }: ImportModalProps
 
   // get all calendars from accounts
   const allCalendars: Calendar[] = accounts.flatMap((account) => account.calendars);
+  const hasAccounts = accounts.length > 0;
 
   // get available calendars for the selected account
   const availableCalendars = allCalendars.filter(
@@ -37,10 +38,13 @@ export function ImportModal({ isOpen, onClose, preloadedFile }: ImportModalProps
 
   // set default account when modal opens
   useEffect(() => {
-    if (isOpen && accounts.length > 0 && !selectedAccountId) {
+    if (isOpen && hasAccounts && !selectedAccountId) {
       setSelectedAccountId(accounts[0].id);
     }
-  }, [isOpen, accounts, selectedAccountId]);
+    if (isOpen && !hasAccounts) {
+      setSelectedAccountId('');
+    }
+  }, [isOpen, accounts, selectedAccountId, hasAccounts]);
 
   // set default calendar when account changes
   useEffect(() => {
@@ -322,13 +326,20 @@ export function ImportModal({ isOpen, onClose, preloadedFile }: ImportModalProps
             <select
               value={selectedAccountId}
               onChange={(e) => setSelectedAccountId(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-surface-200 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-800 dark:text-surface-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              disabled={!hasAccounts}
+              className={`w-full px-3 py-2 text-sm border border-surface-200 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-800 dark:text-surface-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${!hasAccounts ? 'cursor-not-allowed text-surface-400 dark:text-surface-500' : ''}`}
             >
-              {accounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.name}
+              {!hasAccounts ? (
+                <option value="" disabled>
+                  No accounts available
                 </option>
-              ))}
+              ) : (
+                accounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name}
+                  </option>
+                ))
+              )}
             </select>
           </div>
 
@@ -339,7 +350,7 @@ export function ImportModal({ isOpen, onClose, preloadedFile }: ImportModalProps
             <select
               value={selectedCalendarId}
               onChange={(e) => setSelectedCalendarId(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-surface-200 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-800 dark:text-surface-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              className={`w-full px-3 py-2 text-sm border border-surface-200 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-800 dark:text-surface-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${availableCalendars.length === 0 ? 'cursor-not-allowed text-surface-400 dark:text-surface-500' : ''}`}
               disabled={availableCalendars.length === 0}
             >
               {availableCalendars.length === 0 ? (
