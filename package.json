@@ -1,6 +1,6 @@
 {
   "name": "caldav-tasks",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "author": "Sapphic Angels",
   "description": "A cross-platform CalDAV task management app. Currently in very early alpha!",
   "type": "module",
@@ -17,7 +17,6 @@
     "@tauri-apps/api": "^2.9.1",
     "@tauri-apps/plugin-notification": "^2.3.3",
     "date-fns": "^4.1.0",
-    "ical.js": "^2.2.1",
     "lucide-react": "^0.562.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
