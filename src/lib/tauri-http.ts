@@ -124,7 +124,8 @@ export async function put(
   };
   
   if (etag) {
-    headers['If-Match'] = etag;
+    // ETags must be quoted in If-Match header per RFC 2616
+    headers['If-Match'] = `"${etag}"`;
   } else {
     headers['If-None-Match'] = '*';
   }
@@ -143,7 +144,8 @@ export async function del(
   const headers: Record<string, string> = {};
   
   if (etag) {
-    headers['If-Match'] = etag;
+    // ETags must be quoted in If-Match header per RFC 2616
+    headers['If-Match'] = `"${etag}"`;
   }
   
   return tauriRequest(url, 'DELETE', credentials, undefined, headers);
