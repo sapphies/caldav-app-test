@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, ReactNode } from 'react';
+import { useState, useRef, useEffect, ReactNode, CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 
 interface TooltipProps {
@@ -121,13 +121,13 @@ export function Tooltip({
       {isVisible && content && createPortal(
         <div
           ref={tooltipRef}
-          className={`fixed z-[100] px-2 py-1 text-xs font-medium text-white bg-surface-900 dark:bg-surface-700 rounded shadow-lg pointer-events-none animate-tooltip-in ${className}`}
+          className={`fixed z-[100] px-2 py-1 text-xs font-medium text-white bg-surface-900 dark:bg-surface-700 rounded shadow-lg pointer-events-none tooltip-anim animate-tooltip-in ${className}`}
           style={{
             left: coords.x,
             top: coords.y,
-            transform: getTransform(),
             transformOrigin: getTransformOrigin(),
-          }}
+            '--tooltip-transform': getTransform(),
+          } as CSSProperties}
         >
           {content}
           <div
