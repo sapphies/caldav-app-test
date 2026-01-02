@@ -1,6 +1,6 @@
 {
   "productName": "caldav task test",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "identifier": "com.caldav.tasks",
   "build": {
     "beforeDevCommand": "pnpm run dev",
