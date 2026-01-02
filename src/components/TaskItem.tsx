@@ -145,7 +145,7 @@ export function TaskItem({ task, depth, ancestorIds, isDragEnabled, isOverlay }:
         <div className="task-checkbox-wrapper flex-shrink-0" onClick={handleCheckboxClick}>
           <button
             className={`
-              w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all
+              w-5 h-5 rounded border-2 flex items-center justify-center transition-all
               ${task.completed 
                 ? 'bg-primary-500 border-primary-500' 
                 : 'border-surface-300 dark:border-surface-600 hover:border-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30'

@@ -386,7 +386,7 @@ export function TaskEditor({ task }: TaskEditorProps) {
                     <button
                       onClick={() => toggleSubtaskComplete(task.id, subtask.id)}
                       className={`
-                        w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0
+                        w-5 h-5 rounded border-2 flex items-center justify-center transition-all flex-shrink-0
                         ${subtask.completed
                           ? 'bg-primary-500 border-primary-500'
                           : 'border-surface-300 dark:border-surface-600 hover:border-primary-400'
