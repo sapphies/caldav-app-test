@@ -12,6 +12,14 @@ import { SettingsModal } from '@/components/modals/SettingsModal';
 import { ImportModal } from '@/components/modals/ImportModal';
 import { initWebKitDragFix } from './utils/webkit';
 
+// Supported file extensions for import
+const SUPPORTED_EXTENSIONS = ['.ics', '.ical', '.json'];
+
+function isSupportedFile(filename: string): boolean {
+  const lower = filename.toLowerCase();
+  return SUPPORTED_EXTENSIONS.some(ext => lower.endsWith(ext));
+}
+
 function App() {
   // Initialize WebKit drag-and-drop fix for Safari/Tauri
   useEffect(() => {
@@ -22,6 +30,7 @@ function App() {
   const [showImport, setShowImport] = useState(false);
   const [preloadedFile, setPreloadedFile] = useState<{ name: string; content: string } | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isUnsupportedFile, setIsUnsupportedFile] = useState(false);
   const { isSyncing, isOffline, lastSyncTime, syncAll } = useSync();
   
   useTheme();
@@ -32,6 +41,24 @@ function App() {
     onOpenSettings: () => setShowSettings(prev => !prev),
     onSync: syncAll,
   });
+
+  // Check if dragged files are supported
+  const checkDraggedFiles = useCallback((e: React.DragEvent): boolean => {
+    const items = e.dataTransfer?.items;
+    if (!items || items.length === 0) return true; // Default to supported if we can't check
+  
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.kind === 'file') {
+        // Try to get filename from type or check DataTransferItemList
+        const file = item.getAsFile?.();
+        if (file && !isSupportedFile(file.name)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }, []);
   
   const { isEditorOpen, selectedTaskId, tasks } = useTaskStore();
   const selectedTask = tasks.find((t) => t.id === selectedTaskId);
@@ -41,9 +68,16 @@ function App() {
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
+    setIsUnsupportedFile(false);
 
     const file = e.dataTransfer?.files?.[0];
     if (!file) return;
+
+    // Check if it's a supported file type
+    if (!isSupportedFile(file.name)) {
+      // Unsupported file - don't do anything (already showed feedback during drag)
+      return;
+    }
 
     // check if it's a calendar or task file
     const isIcs = file.name.endsWith('.ics') || file.name.endsWith('.ical');
@@ -77,20 +111,35 @@ function App() {
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    // Check if files are supported and update visual feedback
+    const isSupported = checkDraggedFiles(e);
+    setIsUnsupportedFile(!isSupported);
+    
+    // Set the dropEffect to show appropriate cursor
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = isSupported ? 'copy' : 'none';
+    }
+
     setIsDragOver(true);
-  }, []);
+  }, [checkDraggedFiles]);
 
   const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    const isSupported = checkDraggedFiles(e);
+    setIsUnsupportedFile(!isSupported);
+
     setIsDragOver(true);
-  }, []);
+  }, [checkDraggedFiles]);
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) {
       setIsDragOver(false);
+      setIsUnsupportedFile(false);
     }
   }, []);
 
@@ -118,9 +167,20 @@ function App() {
       onDragLeave={handleDragLeave}
     >
       {isDragOver && (
-        <div className="pointer-events-none fixed inset-0 z-[60] flex items-center justify-center bg-primary-600/10 backdrop-blur-sm">
-          <div className="px-4 py-3 rounded-lg bg-white/90 dark:bg-surface-800/90 text-sm font-medium text-surface-800 dark:text-surface-200 shadow-lg border border-primary-200 dark:border-primary-800">
-            Drop .ics or .json files anywhere to import tasks
+        <div className={`pointer-events-none fixed inset-0 z-[60] flex items-center justify-center backdrop-blur-sm ${
+          isUnsupportedFile 
+            ? 'bg-red-600/10' 
+            : 'bg-primary-600/10'
+        }`}>
+          <div className={`px-4 py-3 rounded-lg text-sm font-medium shadow-lg border ${
+            isUnsupportedFile
+              ? 'bg-red-50/90 dark:bg-red-900/90 text-red-800 dark:text-red-200 border-red-200 dark:border-red-800'
+              : 'bg-white/90 dark:bg-surface-800/90 text-surface-800 dark:text-surface-200 border-primary-200 dark:border-primary-800'
+          }`}>
+            {isUnsupportedFile 
+              ? 'Unsupported file format. Only .ics and .json files are supported.'
+              : 'Drop .ics or .json files anywhere to import tasks'
+            }
           </div>
         </div>
       )}
