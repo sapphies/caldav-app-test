@@ -16,6 +16,7 @@
         }
       ]
     },
+    "core:window:allow-show",
     "dialog:default",
     "fs:default",
     "shell:allow-open",
