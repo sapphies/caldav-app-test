@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import X from 'lucide-react/icons/x';
 import Loader2 from 'lucide-react/icons/loader-2';
-import { useTaskStore } from '@/store/taskStore';
+import { useAccounts, useUpdateAccount } from '@/hooks/queries';
 import { Calendar } from '@/types';
 import { caldavService } from '@/lib/caldav';
 import { IconPicker } from '../IconPicker';
@@ -25,7 +25,8 @@ const colorPresets = [
 ];
 
 export function CalendarModal({ calendar, accountId, onClose }: CalendarModalProps) {
-  const { updateAccount, accounts } = useTaskStore();
+  const { data: accounts = [] } = useAccounts();
+  const updateAccountMutation = useUpdateAccount();
 
   const [displayName, setDisplayName] = useState(calendar.displayName);
   const [color, setColor] = useState(calendar.color || '#3b82f6');
@@ -101,7 +102,7 @@ export function CalendarModal({ calendar, accountId, onClose }: CalendarModalPro
           }
           return c;
         });
-        updateAccount(accountId, { calendars: updatedCalendars });
+        updateAccountMutation.mutate({ id: accountId, updates: { calendars: updatedCalendars } });
       }
 
       // show warning if some properties failed

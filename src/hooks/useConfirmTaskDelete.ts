@@ -1,12 +1,13 @@
 import { useCallback } from 'react';
 import { useSettingsStore } from '@/store/settingsStore';
-import { useTaskStore } from '@/store/taskStore';
+import { useTasks, useDeleteTask } from '@/hooks/queries';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { pluralize } from '../utils/format';
 
 export function useConfirmTaskDelete() {
   const { confirmBeforeDelete, deleteSubtasksWithParent } = useSettingsStore();
-  const { deleteTask, tasks } = useTaskStore();
+  const { data: tasks = [] } = useTasks();
+  const deleteTaskMutation = useDeleteTask();
   const { confirm } = useConfirmDialog();
 
   const confirmAndDelete = useCallback(
@@ -48,10 +49,10 @@ export function useConfirmTaskDelete() {
         if (!confirmed) return false;
       }
 
-      deleteTask(taskId, deleteChildren);
+      deleteTaskMutation.mutate({ id: taskId, deleteChildren });
       return true;
     },
-    [confirmBeforeDelete, deleteSubtasksWithParent, deleteTask, confirm, tasks]
+    [confirmBeforeDelete, deleteSubtasksWithParent, deleteTaskMutation, confirm, tasks]
   );
 
   return { confirmAndDelete };

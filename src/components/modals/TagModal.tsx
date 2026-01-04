@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import X from 'lucide-react/icons/x';
-import { useTaskStore } from '@/store/taskStore';
+import { useTags, useCreateTag, useUpdateTag } from '@/hooks/queries';
 import { useModalEscapeKey } from '@/hooks/useModalEscapeKey';
 import { IconPicker, getIconByName } from '../IconPicker';
 
@@ -28,7 +28,9 @@ const colorPresets = [
 ];
 
 export function TagModal({ tagId, onClose }: TagModalProps) {
-  const { tags, addTag, updateTag } = useTaskStore();
+  const { data: tags = [] } = useTags();
+  const createTagMutation = useCreateTag();
+  const updateTagMutation = useUpdateTag();
   
   const existingTag = tagId 
     ? tags.find((t) => t.id === tagId) 
@@ -45,9 +47,9 @@ export function TagModal({ tagId, onClose }: TagModalProps) {
     e.preventDefault();
 
     if (existingTag) {
-      updateTag(existingTag.id, { name, color, icon });
+      updateTagMutation.mutate({ id: existingTag.id, updates: { name, color, icon } });
     } else {
-      addTag({ name, color, icon });
+      createTagMutation.mutate({ name, color, icon });
     }
 
     onClose();

@@ -4,7 +4,7 @@ import Upload from 'lucide-react/icons/upload';
 import FileText from 'lucide-react/icons/file-text';
 import AlertCircle from 'lucide-react/icons/alert-circle';
 import Check from 'lucide-react/icons/check';
-import { useTaskStore } from '@/store/taskStore';
+import { useAccounts, useCreateTask } from '@/hooks/queries';
 import { parseIcsFile, parseJsonTasksFile } from '../../utils/ical';
 import { pluralize } from '../../utils/format';
 import type { Task, Calendar } from '@/types';
@@ -17,7 +17,8 @@ interface ImportModalProps {
 }
 
 export function ImportModal({ isOpen, onClose, preloadedFile }: ImportModalProps) {
-  const { accounts, addTask } = useTaskStore();
+  const { data: accounts = [] } = useAccounts();
+  const createTaskMutation = useCreateTask();
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [selectedCalendarId, setSelectedCalendarId] = useState<string>('');
   const [parsedTasks, setParsedTasks] = useState<Partial<Task>[]>([]);
@@ -176,7 +177,7 @@ export function ImportModal({ isOpen, onClose, preloadedFile }: ImportModalProps
           synced: false,
         };
 
-        addTask(task);
+        createTaskMutation.mutate(task);
       }
 
       setImportSuccess(true);

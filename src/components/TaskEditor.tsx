@@ -10,7 +10,21 @@ import CheckCircle2 from 'lucide-react/icons/check-circle-2';
 import Tag from 'lucide-react/icons/tag';
 import FolderSync from 'lucide-react/icons/folder-sync';
 import Bell from 'lucide-react/icons/bell';
-import { useTaskStore } from '@/store/taskStore';
+import { 
+  useUpdateTask, 
+  useSetEditorOpen,
+  useTags,
+  useCreateTask,
+  useAccounts,
+  useAddTagToTask,
+  useRemoveTagFromTask,
+  useAddReminder,
+  useRemoveReminder,
+  useUpdateSubtask,
+  useDeleteSubtask,
+  useToggleSubtaskComplete,
+} from '@/hooks/queries';
+import * as taskData from '@/lib/taskData';
 import { useSettingsStore } from '@/store/settingsStore';
 import { Task, Priority } from '@/types';
 import { DateTimePicker } from './DateTimePicker';
@@ -31,23 +45,18 @@ const priorities: { value: Priority; label: string; color: string; borderColor: 
 ];
 
 export function TaskEditor({ task }: TaskEditorProps) {
-  const {
-    updateTask,
-    setEditorOpen,
-    tags,
-    updateSubtask,
-    deleteSubtask,
-    toggleSubtaskComplete,
-    addTask,
-    getChildTasks,
-    countChildren,
-    addTagToTask,
-    removeTagFromTask,
-    getTagById,
-    accounts,
-    addReminder,
-    removeReminder,
-  } = useTaskStore();
+  const updateTaskMutation = useUpdateTask();
+  const setEditorOpenMutation = useSetEditorOpen();
+  const createTaskMutation = useCreateTask();
+  const addTagToTaskMutation = useAddTagToTask();
+  const removeTagFromTaskMutation = useRemoveTagFromTask();
+  const addReminderMutation = useAddReminder();
+  const removeReminderMutation = useRemoveReminder();
+  const updateSubtaskMutation = useUpdateSubtask();
+  const deleteSubtaskMutation = useDeleteSubtask();
+  const toggleSubtaskCompleteMutation = useToggleSubtaskComplete();
+  const { data: tags = [] } = useTags();
+  const { data: accounts = [] } = useAccounts();
   const { accentColor } = useSettingsStore();
   const { confirmAndDelete } = useConfirmTaskDelete();
 
@@ -60,9 +69,9 @@ export function TaskEditor({ task }: TaskEditorProps) {
   const [showReminderPicker, setShowReminderPicker] = useState(false);
   const [newReminderDate, setNewReminderDate] = useState<Date | undefined>(undefined);
   const titleRef = useRef<HTMLInputElement>(null);
-  const childTasks = getChildTasks(task.uid);
-  const childCount = countChildren(task.uid);
-  const taskTags = (task.tags || []).map(tagId => getTagById(tagId)).filter(Boolean);
+  const childTasks = taskData.getChildTasks(task.uid);
+  const childCount = taskData.countChildren(task.uid);
+  const taskTags = (task.tags || []).map(tagId => taskData.getTags().find(t => t.id === tagId)).filter(Boolean);
   const availableTags = tags.filter(t => !(task.tags || []).includes(t.id));
 
   // Get current calendar info
@@ -86,55 +95,55 @@ export function TaskEditor({ task }: TaskEditorProps) {
   }, [task.id]);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    updateTask(task.id, { title: e.target.value });
+    updateTaskMutation.mutate({ id: task.id, updates: { title: e.target.value } });
   };
 
   const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    updateTask(task.id, { description: e.target.value });
+    updateTaskMutation.mutate({ id: task.id, updates: { description: e.target.value } });
   };
 
   const handlePriorityChange = (priority: Priority) => {
-    updateTask(task.id, { priority });
+    updateTaskMutation.mutate({ id: task.id, updates: { priority } });
   };
 
   const handleCalendarChange = (calendarId: string) => {
     const targetCalendar = allCalendars.find(c => c.id === calendarId);
     if (targetCalendar) {
-      updateTask(task.id, { 
+      updateTaskMutation.mutate({ id: task.id, updates: { 
         calendarId: targetCalendar.id,
         accountId: targetCalendar.accountId,
-      });
+      } });
     }
   };
 
   const handleStartDateChange = (date: Date | undefined, allDay?: boolean) => {
-    updateTask(task.id, { startDate: date, startDateAllDay: allDay });
+    updateTaskMutation.mutate({ id: task.id, updates: { startDate: date, startDateAllDay: allDay } });
   };
 
   const handleDueDateChange = (date: Date | undefined, allDay?: boolean) => {
-    updateTask(task.id, { dueDate: date, dueDateAllDay: allDay });
+    updateTaskMutation.mutate({ id: task.id, updates: { dueDate: date, dueDateAllDay: allDay } });
   };
 
   const handleStartDateAllDayChange = (allDay: boolean) => {
-    updateTask(task.id, { startDateAllDay: allDay });
+    updateTaskMutation.mutate({ id: task.id, updates: { startDateAllDay: allDay } });
   };
 
   const handleDueDateAllDayChange = (allDay: boolean) => {
-    updateTask(task.id, { dueDateAllDay: allDay });
+    updateTaskMutation.mutate({ id: task.id, updates: { dueDateAllDay: allDay } });
   };
 
   const handleAddReminder = (date: Date) => {
-    addReminder(task.id, date);
+    addReminderMutation.mutate({ taskId: task.id, trigger: date });
   };
 
   const handleRemoveReminder = (reminderId: string) => {
-    removeReminder(task.id, reminderId);
+    removeReminderMutation.mutate({ taskId: task.id, reminderId });
   };
 
   const handleAddChildTask = () => {
     if (newSubtaskTitle.trim()) {
       // create a new task with parentUid set to this task's UID
-      addTask({
+      createTaskMutation.mutate({
         title: newSubtaskTitle.trim(),
         parentUid: task.uid,
         accountId: task.accountId,
@@ -155,7 +164,7 @@ export function TaskEditor({ task }: TaskEditorProps) {
   const handleDelete = async () => {
     const deleted = await confirmAndDelete(task.id);
     if (deleted) {
-      setEditorOpen(false);
+      setEditorOpenMutation.mutate(false);
     }
   };
 
@@ -172,7 +181,7 @@ export function TaskEditor({ task }: TaskEditorProps) {
             <Trash2 className="w-5 h-5" />
           </button>
           <button
-            onClick={() => setEditorOpen(false)}
+            onClick={() => setEditorOpenMutation.mutate(false)}
             className="p-2 text-surface-500 hover:text-surface-700 dark:hover:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700 rounded-lg transition-colors"
             title="Close (Esc)"
           >
@@ -310,7 +319,7 @@ export function TaskEditor({ task }: TaskEditorProps) {
                   <TagIcon className="w-3 h-3" />
                   {tag.name}
                   <button
-                    onClick={() => removeTagFromTask(task.id, tag.id)}
+                    onClick={() => removeTagFromTaskMutation.mutate({ taskId: task.id, tagId: tag.id })}
                     className="p-0.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
                   >
                     <X className="w-3 h-3" />
@@ -341,7 +350,7 @@ export function TaskEditor({ task }: TaskEditorProps) {
                           <button
                             key={tag.id}
                             onClick={() => {
-                              addTagToTask(task.id, tag.id);
+                              addTagToTaskMutation.mutate({ taskId: task.id, tagId: tag.id });
                               setShowTagPicker(false);
                             }}
                             className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors"
@@ -458,10 +467,10 @@ export function TaskEditor({ task }: TaskEditorProps) {
                 checkmarkColor={checkmarkColor}
                 expandedSubtasks={expandedSubtasks}
                 setExpandedSubtasks={setExpandedSubtasks}
-                updateTask={updateTask}
+                updateTask={(id, updates) => updateTaskMutation.mutate({ id, updates })}
                 confirmAndDelete={confirmAndDelete}
-                getChildTasks={getChildTasks}
-                countChildren={countChildren}
+                getChildTasks={taskData.getChildTasks}
+                countChildren={taskData.countChildren}
               />
             ))}
 
@@ -477,7 +486,7 @@ export function TaskEditor({ task }: TaskEditorProps) {
                     className="flex items-center gap-2 group opacity-60"
                   >
                     <button
-                      onClick={() => toggleSubtaskComplete(task.id, subtask.id)}
+                      onClick={() => toggleSubtaskCompleteMutation.mutate({ taskId: task.id, subtaskId: subtask.id })}
                       className={`
                         w-5 h-5 rounded border-2 flex items-center justify-center transition-all flex-shrink-0
                         ${subtask.completed
@@ -491,14 +500,14 @@ export function TaskEditor({ task }: TaskEditorProps) {
                     <input
                       type="text"
                       value={subtask.title}
-                      onChange={(e) => updateSubtask(task.id, subtask.id, { title: e.target.value })}
+                      onChange={(e) => updateSubtaskMutation.mutate({ taskId: task.id, subtaskId: subtask.id, updates: { title: e.target.value } })}
                       className={`
                         flex-1 px-2 py-1 text-sm bg-transparent border-0 focus:outline-none focus:ring-0
                         ${subtask.completed ? 'line-through text-surface-400' : 'text-surface-700 dark:text-surface-300'}
                       `}
                     />
                     <button
-                      onClick={() => deleteSubtask(task.id, subtask.id)}
+                      onClick={() => deleteSubtaskMutation.mutate({ taskId: task.id, subtaskId: subtask.id })}
                       className="opacity-0 group-hover:opacity-100 p-1 text-surface-400 hover:text-red-500 dark:hover:text-red-400 transition-all"
                     >
                       <X className="w-4 h-4" />

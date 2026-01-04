@@ -1,9 +1,9 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
-import { useSync } from '@/hooks/useSync';
+import { useSyncQuery } from '@/hooks/queries';
 import { useTheme } from '@/hooks/useTheme';
 import { useNotifications } from '@/hooks/useNotifications';
-import { useTaskStore } from '@/store/taskStore';
+import { useTasks, useUIState } from '@/hooks/queries';
 import { Sidebar } from '@/components/Sidebar';
 import { TaskList } from '@/components/TaskList';
 import { TaskEditor } from '@/components/TaskEditor';
@@ -31,7 +31,7 @@ function App() {
   const [preloadedFile, setPreloadedFile] = useState<{ name: string; content: string } | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isUnsupportedFile, setIsUnsupportedFile] = useState(false);
-  const { isSyncing, isOffline, lastSyncTime, syncAll } = useSync();
+  const { isSyncing, isOffline, lastSyncTime, syncAll } = useSyncQuery();
   
   useTheme();
 
@@ -41,12 +41,18 @@ function App() {
     onOpenSettings: () => setShowSettings(prev => !prev),
     onSync: syncAll,
   });
+  
+  const { data: uiState } = useUIState();
+  const { data: tasks = [] } = useTasks();
+  const isEditorOpen = uiState?.isEditorOpen ?? false;
+  const selectedTaskId = uiState?.selectedTaskId ?? null;
+  const selectedTask = tasks.find((t) => t.id === selectedTaskId);
 
   // Check if dragged files are supported
   const checkDraggedFiles = useCallback((e: React.DragEvent): boolean => {
     const items = e.dataTransfer?.items;
     if (!items || items.length === 0) return true; // Default to supported if we can't check
-  
+
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       if (item.kind === 'file') {
@@ -59,9 +65,6 @@ function App() {
     }
     return true;
   }, []);
-  
-  const { isEditorOpen, selectedTaskId, tasks } = useTaskStore();
-  const selectedTask = tasks.find((t) => t.id === selectedTaskId);
 
   // handle file drop for import
   const handleFileDrop = useCallback(async (e: React.DragEvent) => {

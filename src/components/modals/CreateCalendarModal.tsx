@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import X from 'lucide-react/icons/x';
 import Loader2 from 'lucide-react/icons/loader-2';
-import { useTaskStore } from '@/store/taskStore';
+import { useAddCalendar } from '@/hooks/queries';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useModalEscapeKey } from '@/hooks/useModalEscapeKey';
 import { caldavService } from '@/lib/caldav';
@@ -25,7 +25,7 @@ const colorPresets = [
 ];
 
 export function CreateCalendarModal({ accountId, onClose }: CreateCalendarModalProps) {
-  const { addCalendar } = useTaskStore();
+  const addCalendarMutation = useAddCalendar();
   const { accentColor } = useSettingsStore();
 
   const [displayName, setDisplayName] = useState('');
@@ -47,7 +47,7 @@ export function CreateCalendarModal({ accountId, onClose }: CreateCalendarModalP
       const calendar = await caldavService.createCalendar(accountId, displayName, color);
       
       // add to local store with icon
-      addCalendar(accountId, { ...calendar, icon });
+      addCalendarMutation.mutate({ accountId, calendarData: { ...calendar, icon } });
       
       onClose();
     } catch (err) {

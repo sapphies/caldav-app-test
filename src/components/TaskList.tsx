@@ -16,7 +16,14 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { useTaskStore } from '@/store/taskStore';
+import {
+  useFilteredTasks,
+  useUIState,
+  useCreateTask,
+  useSetSelectedTask,
+  useReorderTasks,
+} from '@/hooks/queries';
+import * as taskData from '@/lib/taskData';
 import { TaskItem } from './TaskItem';
 import ListTodo from 'lucide-react/icons/list-todo';
 import Plus from 'lucide-react/icons/plus';
@@ -28,16 +35,14 @@ import { setIsKeyboardDragging } from '@/lib/dragState';
 const INDENT_SHIFT_SIZE = 28;
 
 export function TaskList() {
-  const {
-    getFilteredTasks,
-    getSortedTasks,
-    reorderTasks,
-    sortConfig,
-    addTask,
-    setSelectedTask,
-    searchQuery,
-    getChildTasks,
-  } = useTaskStore();
+  const { data: uiState } = useUIState();
+  const { data: filteredTasksData = [] } = useFilteredTasks();
+  const createTaskMutation = useCreateTask();
+  const setSelectedTaskMutation = useSetSelectedTask();
+  const reorderTasksMutation = useReorderTasks();
+  
+  const sortConfig = uiState?.sortConfig ?? { mode: 'manual' as const, direction: 'asc' as const };
+  const searchQuery = uiState?.searchQuery ?? '';
 
   const [activeTask, setActiveTask] = useState<FlattenedTask | null>(null);
   const [targetIndent, setTargetIndent] = useState<number>(0);
@@ -47,7 +52,7 @@ export function TaskList() {
   const dragStartXRef = useRef<number>(0);
   const originalIndentRef = useRef<number>(0);
 
-  const filteredTasks = getFilteredTasks();
+  const filteredTasks = filteredTasksData;
   
   // filter out child tasks - top level only for the root
   const topLevelTasks = useMemo(
@@ -56,14 +61,14 @@ export function TaskList() {
   );
   
   const sortedTasks = useMemo(
-    () => getSortedTasks(topLevelTasks),
-    [topLevelTasks, getSortedTasks, sortConfig]
+    () => taskData.getSortedTasks(topLevelTasks, sortConfig),
+    [topLevelTasks, sortConfig]
   );
 
   // flatten the tree into a single list with depth info
   const flattenedTasks = useMemo(
-    () => flattenTasks(sortedTasks, getChildTasks, getSortedTasks),
-    [sortedTasks, getChildTasks, getSortedTasks]
+    () => flattenTasks(sortedTasks, taskData.getChildTasks, (tasks) => taskData.getSortedTasks(tasks, sortConfig)),
+    [sortedTasks, sortConfig]
   );
 
   // Clear active task if it no longer exists (e.g., was deleted during drag)
@@ -251,17 +256,20 @@ export function TaskList() {
     }
 
     // call reorder with the final target indent
-    reorderTasks(
-      active.id as string, 
-      over.id as string,
-      flattenedTasks,
-      finalTargetIndent
-    );
-  }, [flattenedTasks, reorderTasks, targetIndent]);
+    reorderTasksMutation.mutate({
+      activeId: active.id as string, 
+      overId: over.id as string,
+      flattenedItems: flattenedTasks,
+      targetIndent: finalTargetIndent
+    });
+  }, [flattenedTasks, reorderTasksMutation, targetIndent]);
 
   const handleQuickAdd = () => {
-    const task = addTask({ title: '' });
-    setSelectedTask(task.id);
+    createTaskMutation.mutate({ title: '' }, {
+      onSuccess: (task) => {
+        setSelectedTaskMutation.mutate(task.id);
+      }
+    });
   };
 
   const metaKey = getMetaKeyLabel();

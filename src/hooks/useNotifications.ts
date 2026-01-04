@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useTaskStore } from '@/store/taskStore';
+import { useTasks } from '@/hooks/queries';
 import { useSettingsStore } from '@/store/settingsStore';
 import { isPast, differenceInMinutes } from 'date-fns';
 
@@ -60,7 +60,7 @@ async function showNotification(options: NotificationOptions): Promise<void> {
  * hook that monitors tasks and shows notifications for due tasks and reminders
  */
 export function useNotifications() {
-  const { tasks } = useTaskStore();
+  const { data: tasks = [] } = useTasks();
   const { notifications, notifyBefore } = useSettingsStore();
   const notifiedTasksRef = useRef<Set<string>>(new Set());
   const notifiedRemindersRef = useRef<Set<string>>(new Set());

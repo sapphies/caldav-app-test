@@ -8,7 +8,14 @@ import RefreshCw from 'lucide-react/icons/refresh-cw';
 import Eye from 'lucide-react/icons/eye';
 import EyeOff from 'lucide-react/icons/eye-off';
 import WifiOff from 'lucide-react/icons/wifi-off';
-import { useTaskStore } from '@/store/taskStore';
+import { 
+  useUIState, 
+  useSetSearchQuery, 
+  useSetSortConfig, 
+  useSetShowCompletedTasks,
+  useCreateTask,
+  useSetSelectedTask,
+} from '@/hooks/queries';
 import { useModalState } from '@/context/modalStateContext';
 import { SortMode } from '@/types';
 import { Tooltip } from './Tooltip';
@@ -33,16 +40,16 @@ interface HeaderProps {
 }
 
 export function Header({ isSyncing = false, isOffline = false, lastSyncTime, onSync }: HeaderProps) {
-  const {
-    searchQuery,
-    setSearchQuery,
-    sortConfig,
-    setSortConfig,
-    showCompletedTasks,
-    setShowCompletedTasks,
-    addTask,
-    setSelectedTask,
-  } = useTaskStore();
+  const { data: uiState } = useUIState();
+  const setSearchQueryMutation = useSetSearchQuery();
+  const setSortConfigMutation = useSetSortConfig();
+  const setShowCompletedTasksMutation = useSetShowCompletedTasks();
+  const createTaskMutation = useCreateTask();
+  const setSelectedTaskMutation = useSetSelectedTask();
+
+  const searchQuery = uiState?.searchQuery ?? '';
+  const sortConfig = uiState?.sortConfig ?? { mode: 'manual' as SortMode, direction: 'asc' as const };
+  const showCompletedTasks = uiState?.showCompletedTasks ?? true;
 
   const { isAnyModalOpen } = useModalState();
   const [showSortMenu, setShowSortMenu] = useState(false);
@@ -63,19 +70,22 @@ export function Header({ isSyncing = false, isOffline = false, lastSyncTime, onS
   }, [showSortMenu]);
 
   const handleNewTask = () => {
-    const task = addTask({ title: '' });
-    setSelectedTask(task.id);
+    createTaskMutation.mutate({ title: '' }, {
+      onSuccess: (task) => {
+        setSelectedTaskMutation.mutate(task.id);
+      }
+    });
   };
 
   const toggleSortDirection = () => {
-    setSortConfig({
+    setSortConfigMutation.mutate({
       ...sortConfig,
       direction: sortConfig.direction === 'asc' ? 'desc' : 'asc',
     });
   };
 
   const handleSortChange = (mode: SortMode) => {
-    setSortConfig({ ...sortConfig, mode });
+    setSortConfigMutation.mutate({ ...sortConfig, mode });
     setShowSortMenu(false);
   };
 
@@ -89,7 +99,7 @@ export function Header({ isSyncing = false, isOffline = false, lastSyncTime, onS
             data-search-input
             placeholder={`Search tasks... (${searchShortcut})`}
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => setSearchQueryMutation.mutate(e.target.value)}
             className="w-full pl-9 pr-4 py-2 bg-surface-100 dark:bg-surface-700 border border-transparent rounded-lg text-sm text-surface-800 dark:text-surface-200 placeholder:text-surface-400 focus:outline-none focus:border-primary-300 focus:bg-white dark:focus:bg-surface-600 transition-colors"
           />
         </div>
@@ -134,7 +144,7 @@ export function Header({ isSyncing = false, isOffline = false, lastSyncTime, onS
             position="bottom"
           >
             <button
-              onClick={() => setShowCompletedTasks(!showCompletedTasks)}
+              onClick={() => setShowCompletedTasksMutation.mutate(!showCompletedTasks)}
               className={`p-2 rounded-lg transition-colors ${
                 showCompletedTasks
                   ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'

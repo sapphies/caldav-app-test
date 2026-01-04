@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import X from 'lucide-react/icons/x';
 import Loader2 from 'lucide-react/icons/loader-2';
-import { useTaskStore } from '@/store/taskStore';
+import { useCreateAccount, useUpdateAccount, useAddCalendar } from '@/hooks/queries';
 import { useModalEscapeKey } from '@/hooks/useModalEscapeKey';
 import { Account, ServerType } from '@/types';
 import { caldavService } from '@/lib/caldav';
@@ -12,7 +12,9 @@ interface AccountModalProps {
 }
 
 export function AccountModal({ account, onClose }: AccountModalProps) {
-  const { addAccount, updateAccount, addCalendar } = useTaskStore();
+  const createAccountMutation = useCreateAccount();
+  const updateAccountMutation = useUpdateAccount();
+  const addCalendarMutation = useAddCalendar();
 
   const [name, setName] = useState(account?.name || '');
   const [serverUrl, setServerUrl] = useState(account?.serverUrl || '');
@@ -41,13 +43,13 @@ export function AccountModal({ account, onClose }: AccountModalProps) {
           await caldavService.connect(account.id, serverUrl, username, effectivePassword, serverType);
         }
         
-        updateAccount(account.id, { 
+        updateAccountMutation.mutate({ id: account.id, updates: { 
           name, 
           serverUrl, 
           username,
           password: effectivePassword || account.password,
           serverType,
-        });
+        } });
       } else {
         // for new accounts, first test connection before adding to store
         if (!effectivePassword) {
@@ -65,19 +67,21 @@ export function AccountModal({ account, onClose }: AccountModalProps) {
         console.log(`[Account] Found ${calendars.length} calendars:`, calendars);
         
         // connection successful - now add the account with the same ID we used for connection
-        const newAccount = addAccount({ 
+        createAccountMutation.mutate({ 
           id: tempId,  // use the same ID so the caldavService connection maps correctly
           name, 
           serverUrl, 
           username, 
           password: effectivePassword,
           serverType,
+        }, {
+          onSuccess: (newAccount) => {
+            // add the fetched calendars
+            for (const calendar of calendars) {
+              addCalendarMutation.mutate({ accountId: newAccount.id, calendarData: calendar });
+            }
+          }
         });
-        
-        // add the fetched calendars
-        for (const calendar of calendars) {
-          addCalendar(newAccount.id, calendar);
-        }
       }
 
       onClose();

@@ -5,7 +5,7 @@
 
 import { Task, Priority, Subtask, Reminder } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
-import { useTaskStore } from '@/store/taskStore';
+import * as taskData from '@/lib/taskData';
 
 // Apple epoch: January 1, 2001 00:00:00 GMT in milliseconds since Unix epoch
 // Used for X-APPLE-SORT-ORDER which stores seconds since Apple epoch
@@ -485,7 +485,7 @@ function generateVTodo(task: Task): string {
   
   // Tags as CATEGORIES
   if (task.tags && task.tags.length > 0) {
-    const tags = useTaskStore.getState().tags;
+    const tags = taskData.getTags();
     const tagNames = task.tags
       .map(tagId => tags.find(t => t.id === tagId)?.name)
       .filter((name): name is string => Boolean(name));

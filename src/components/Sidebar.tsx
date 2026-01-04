@@ -12,7 +12,20 @@ import Inbox from 'lucide-react/icons/inbox';
 import MoreVertical from 'lucide-react/icons/more-vertical';
 import Share2 from 'lucide-react/icons/share-2';
 import Upload from 'lucide-react/icons/upload';
-import { useTaskStore } from '@/store/taskStore';
+import { 
+  useAccounts,
+  useTags,
+  useUIState,
+  useTasks,
+  useSetActiveAccount,
+  useSetActiveCalendar,
+  useSetActiveTag,
+  useSetAllTasksView,
+  useDeleteAccount,
+  useDeleteTag,
+  useUpdateAccount,
+} from '@/hooks/queries';
+import * as taskData from '@/lib/taskData';
 import { useGlobalContextMenuClose } from '@/hooks/useGlobalContextMenu';
 import { useModalState } from '@/context/modalStateContext';
 import { Account, Calendar as CalendarType } from '@/types';
@@ -34,22 +47,21 @@ interface SidebarProps {
 }
 
 export function Sidebar({ onOpenSettings, onOpenImport }: SidebarProps) {
-  const {
-    accounts,
-    tags,
-    // activeAccountId, (todo: figure out what to do with activeaccountid later)
-    activeCalendarId,
-    activeTagId,
-    setActiveAccount,
-    setActiveCalendar,
-    setActiveTag,
-    setAllTasksView,
-    deleteAccount,
-    deleteTag,
-    updateAccount,
-    tasks,
-    getCalendarTasks,
-  } = useTaskStore();
+  const { data: accounts = [] } = useAccounts();
+  const { data: tags = [] } = useTags();
+  const { data: uiState } = useUIState();
+  const { data: tasks = [] } = useTasks();
+  
+  const setActiveAccountMutation = useSetActiveAccount();
+  const setActiveCalendarMutation = useSetActiveCalendar();
+  const setActiveTagMutation = useSetActiveTag();
+  const setAllTasksViewMutation = useSetAllTasksView();
+  const deleteAccountMutation = useDeleteAccount();
+  const deleteTagMutation = useDeleteTag();
+  const updateAccountMutation = useUpdateAccount();
+
+  const activeCalendarId = uiState?.activeCalendarId ?? null;
+  const activeTagId = uiState?.activeTagId ?? null;
 
   const { isAnyModalOpen } = useModalState();
 
@@ -135,8 +147,8 @@ export function Sidebar({ onOpenSettings, onOpenImport }: SidebarProps) {
         <div className="flex-1 overflow-y-auto overscroll-contain">
           <button
             onClick={() => {
-              setAllTasksView();
-              setActiveAccount(null);
+              setAllTasksViewMutation.mutate();
+              setActiveAccountMutation.mutate(null);
             }}
             className={`w-full flex items-center gap-2 px-4 py-2 mb-2 text-sm transition-colors ${
               activeCalendarId === null && activeTagId === null
@@ -249,8 +261,8 @@ export function Sidebar({ onOpenSettings, onOpenImport }: SidebarProps) {
                               key={calendar.id}
                               data-context-menu
                               onClick={() => {
-                                setActiveAccount(account.id);
-                                setActiveCalendar(calendar.id);
+                                setActiveAccountMutation.mutate(account.id);
+                                setActiveCalendarMutation.mutate(calendar.id);
                               }}
                               onContextMenu={(e) => handleContextMenu(e, 'calendar', calendar.id, account.id)}
                               className={`w-full flex items-center gap-2 px-4 py-2 text-sm transition-colors ${
@@ -311,7 +323,7 @@ export function Sidebar({ onOpenSettings, onOpenImport }: SidebarProps) {
                   <button
                     key={tag.id}
                     data-context-menu
-                    onClick={() => setActiveTag(tag.id)}
+                    onClick={() => setActiveTagMutation.mutate(tag.id)}
                     onContextMenu={(e) => handleContextMenu(e, 'tag', tag.id)}
                     className={`w-full flex items-center gap-2 px-4 py-1.5 text-sm transition-colors ${
                       isActive
@@ -385,9 +397,9 @@ export function Sidebar({ onOpenSettings, onOpenImport }: SidebarProps) {
               onClick={() => {
                 // trigger sync for this calendar
                 if (contextMenu.accountId) {
-                  setActiveAccount(contextMenu.accountId);
+                  setActiveAccountMutation.mutate(contextMenu.accountId);
                 }
-                setActiveCalendar(contextMenu.id);
+                setActiveCalendarMutation.mutate(contextMenu.id);
                 handleCloseContextMenu();
               }}
               className="w-full flex items-center gap-2 px-3 py-2 text-sm text-surface-700 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700"
@@ -442,9 +454,9 @@ export function Sidebar({ onOpenSettings, onOpenImport }: SidebarProps) {
           <button
             onClick={async () => {
               if (contextMenu.type === 'account') {
-                deleteAccount(contextMenu.id);
+                deleteAccountMutation.mutate(contextMenu.id);
               } else if (contextMenu.type === 'tag') {
-                deleteTag(contextMenu.id);
+                deleteTagMutation.mutate(contextMenu.id);
               } else if (contextMenu.type === 'calendar' && contextMenu.accountId) {
                 // delete calendar from server
                 try {
@@ -453,7 +465,7 @@ export function Sidebar({ onOpenSettings, onOpenImport }: SidebarProps) {
                   const account = accounts.find((a) => a.id === contextMenu.accountId);
                   if (account) {
                     const updatedCalendars = account.calendars.filter((c) => c.id !== contextMenu.id);
-                    updateAccount(contextMenu.accountId, { calendars: updatedCalendars });
+                    updateAccountMutation.mutate({ id: contextMenu.accountId, updates: { calendars: updatedCalendars } });
                   }
                 } catch (error) {
                   console.error('Failed to delete calendar:', error);
@@ -509,7 +521,7 @@ export function Sidebar({ onOpenSettings, onOpenImport }: SidebarProps) {
 
       {showExportModal && exportCalendarId && (
         <ExportModal
-          tasks={getCalendarTasks(exportCalendarId)}
+          tasks={taskData.getCalendarTasks(exportCalendarId)}
           type="single-calendar"
           calendarName={
             accounts

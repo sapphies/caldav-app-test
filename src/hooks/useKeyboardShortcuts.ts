@@ -1,5 +1,14 @@
 import { useEffect, useCallback, useMemo } from 'react';
-import { useTaskStore } from '@/store/taskStore';
+import { 
+  useUIState, 
+  useCreateTask, 
+  useSetSearchQuery, 
+  useToggleTaskComplete, 
+  useSetSelectedTask, 
+  useSetEditorOpen,
+  useFilteredTasks,
+} from '@/hooks/queries';
+import * as taskData from '@/lib/taskData';
 import { useSettingsStore, KeyboardShortcut } from '@/store/settingsStore';
 import { getAltKeyLabel, getMetaKeyLabel, getModifierJoiner, getShiftKeyLabel } from '../utils/keyboard';
 import { useConfirmTaskDelete } from '@/hooks/useConfirmTaskDelete';
@@ -14,25 +23,29 @@ interface UseKeyboardShortcutsOptions {
 
 export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) {
   const { onOpenSettings, onSync } = options;
-  const {
-    addTask,
-    setSearchQuery,
-    selectedTaskId,
-    toggleTaskComplete,
-    setSelectedTask,
-    setEditorOpen,
-    getFilteredTasks,
-    getSortedTasks,
-  } = useTaskStore();
+  const { data: uiState } = useUIState();
+  const { data: filteredTasks = [] } = useFilteredTasks();
+  const createTaskMutation = useCreateTask();
+  const setSearchQueryMutation = useSetSearchQuery();
+  const toggleTaskCompleteMutation = useToggleTaskComplete();
+  const setSelectedTaskMutation = useSetSelectedTask();
+  const setEditorOpenMutation = useSetEditorOpen();
+  
+  const selectedTaskId = uiState?.selectedTaskId ?? null;
+  const sortConfig = uiState?.sortConfig ?? { mode: 'manual' as const, direction: 'asc' as const };
+  
   const { keyboardShortcuts } = useSettingsStore();
   const { confirmAndDelete } = useConfirmTaskDelete();
   const { isOpen: isConfirmDialogOpen } = useConfirmDialog();
   const { isAnyModalOpen } = useModalState();
 
   const handleNewTask = useCallback(() => {
-    const task = addTask({ title: '' });
-    setSelectedTask(task.id);
-  }, [addTask, setSelectedTask]);
+    createTaskMutation.mutate({ title: '' }, {
+      onSuccess: (task) => {
+        setSelectedTaskMutation.mutate(task.id);
+      }
+    });
+  }, [createTaskMutation, setSelectedTaskMutation]);
 
   const handleSearch = useCallback(() => {
     const searchInput = document.querySelector<HTMLInputElement>('[data-search-input]');
@@ -47,50 +60,48 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
 
   const handleToggleComplete = useCallback(() => {
     if (selectedTaskId) {
-      toggleTaskComplete(selectedTaskId);
+      toggleTaskCompleteMutation.mutate(selectedTaskId);
     }
-  }, [selectedTaskId, toggleTaskComplete]);
+  }, [selectedTaskId, toggleTaskCompleteMutation]);
 
   const handleEscape = useCallback(() => {
-    setSearchQuery('');
-    setEditorOpen(false);
+    setSearchQueryMutation.mutate('');
+    setEditorOpenMutation.mutate(false);
     const searchInput = document.querySelector<HTMLInputElement>('[data-search-input]');
     searchInput?.blur();
-  }, [setSearchQuery, setEditorOpen]);
+  }, [setSearchQueryMutation, setEditorOpenMutation]);
 
   const handleNavigateUp = useCallback(() => {
-    const filteredTasks = getFilteredTasks();
-    const sortedTasks = getSortedTasks(filteredTasks);
+    const sortedTasks = taskData.getSortedTasks(filteredTasks, sortConfig);
     
     if (sortedTasks.length === 0) return;
     
     if (!selectedTaskId) {
-      setSelectedTask(sortedTasks[0].id);
+      setSelectedTaskMutation.mutate(sortedTasks[0].id);
       return;
     }
     
     const currentIndex = sortedTasks.findIndex((t) => t.id === selectedTaskId);
     if (currentIndex > 0) {
-      setSelectedTask(sortedTasks[currentIndex - 1].id);
+      setSelectedTaskMutation.mutate(sortedTasks[currentIndex - 1].id);
     }
-  }, [selectedTaskId, getFilteredTasks, getSortedTasks, setSelectedTask]);
+  }, [selectedTaskId, filteredTasks, sortConfig, setSelectedTaskMutation]);
 
   const handleNavigateDown = useCallback(() => {
-    const filteredTasks = getFilteredTasks();
-    const sortedTasks = getSortedTasks(filteredTasks);
+    const sortedTasks = taskData.getSortedTasks(filteredTasks, sortConfig);
     
     if (sortedTasks.length === 0) return;
     
     if (!selectedTaskId) {
-      setSelectedTask(sortedTasks[0].id);
+      setSelectedTaskMutation.mutate(sortedTasks[0].id);
       return;
     }
     
     const currentIndex = sortedTasks.findIndex((t) => t.id === selectedTaskId);
     if (currentIndex < sortedTasks.length - 1) {
-      setSelectedTask(sortedTasks[currentIndex + 1].id);
+      setSelectedTaskMutation.mutate(sortedTasks[currentIndex + 1].id);
     }
-  }, [selectedTaskId, getFilteredTasks, getSortedTasks, setSelectedTask]);
+  }, [selectedTaskId, filteredTasks, sortConfig, setSelectedTaskMutation]);
 
   const handleOpenSettings = useCallback(() => {
     // If settings is already open, this will close it (toggle behavior)

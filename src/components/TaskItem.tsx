@@ -7,7 +7,14 @@ import Trash2 from 'lucide-react/icons/trash-2';
 import Edit2 from 'lucide-react/icons/edit-2';
 import Share2 from 'lucide-react/icons/share-2';
 import { useState } from 'react';
-import { useTaskStore } from '@/store/taskStore';
+import { 
+  useToggleTaskComplete, 
+  useSetSelectedTask,
+  useUIState,
+  useAccounts,
+  useSetActiveTag,
+} from '@/hooks/queries';
+import * as taskData from '@/lib/taskData';
 import { useSettingsStore } from '@/store/settingsStore';
 import { Task, Priority } from '@/types';
 import { ExportModal } from './modals/ExportModal';
@@ -34,29 +41,28 @@ const priorityColors: Record<Priority, string> = {
 };
 
 export function TaskItem({ task, depth, ancestorIds, isDragEnabled, isOverlay }: TaskItemProps) {
-  const { 
-    toggleTaskComplete, 
-    setSelectedTask, 
-    selectedTaskId,
-    countChildren,
-    toggleTaskCollapsed,
-    exportTaskAndChildren,
-    accounts,
-    activeCalendarId,
-    setActiveTag,
-    getTagById,
-  } = useTaskStore();
+  const { data: uiState } = useUIState();
+  const { data: accounts = [] } = useAccounts();
+  const toggleTaskCompleteMutation = useToggleTaskComplete();
+  const setSelectedTaskMutation = useSetSelectedTask();
+  const setActiveTagMutation = useSetActiveTag();
   const { accentColor } = useSettingsStore();
   const { contextMenu, handleContextMenu, handleCloseContextMenu, setContextMenu } = useContextMenu();
   const [showExportModal, setShowExportModal] = useState(false);
   const { confirmAndDelete } = useConfirmTaskDelete();
 
+  const selectedTaskId = uiState?.selectedTaskId ?? null;
+  const activeCalendarId = uiState?.activeCalendarId ?? null;
+
   // get contrast color for checkbox checkmark
   const checkmarkColor = getContrastTextColor(accentColor);
 
-  const childCount = countChildren(task.uid);
+  const childCount = taskData.countChildren(task.uid);
   const completedSubtasks = task.subtasks.filter((s) => s.completed).length;
   const totalSubtasks = task.subtasks.length;
+
+  // helper to get tag by id
+  const getTagById = (tagId: string) => taskData.getTags().find(t => t.id === tagId);
 
   // pass ancestorIds as data so it can be accessed in handleDragEnd
   const {
@@ -91,12 +97,12 @@ export function TaskItem({ task, depth, ancestorIds, isDragEnabled, isOverlay }:
         (e.target as HTMLElement).closest('.collapse-button')) {
       return;
     }
-    setSelectedTask(task.id);
+    setSelectedTaskMutation.mutate(task.id);
   };
 
   const handleCheckboxClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    toggleTaskComplete(task.id);
+    toggleTaskCompleteMutation.mutate(task.id);
   };
 
   const handleDelete = async () => {
@@ -109,11 +115,16 @@ export function TaskItem({ task, depth, ancestorIds, isDragEnabled, isOverlay }:
   };
 
   const handleExport = () => {
-    const result = exportTaskAndChildren(task.id);
+    const result = taskData.exportTaskAndChildren(task.id);
     if (result) {
       setShowExportModal(true);
     }
     setContextMenu(null);
+  };
+
+  const handleToggleCollapsed = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    taskData.toggleTaskCollapsed(task.id);
   };
 
   // todo: implement duplicate functionality at some point
@@ -177,7 +188,7 @@ export function TaskItem({ task, depth, ancestorIds, isDragEnabled, isOverlay }:
                     key={tag.id}
                     onClick={(e) => {
                       e.stopPropagation();
-                      setActiveTag(tag.id);
+                      setActiveTagMutation.mutate(tag.id);
                     }}
                     className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium hover:opacity-80 transition-opacity"
                     style={{ 
@@ -217,10 +228,7 @@ export function TaskItem({ task, depth, ancestorIds, isDragEnabled, isOverlay }:
 
               {childCount > 0 && (
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleTaskCollapsed(task.id);
-                  }}
+                  onClick={handleToggleCollapsed}
                   className="collapse-button inline-flex items-center gap-0.5 px-2 py-0.5 rounded border border-surface-200 dark:border-surface-600 bg-surface-50 dark:bg-surface-800 hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors text-xs text-surface-500 dark:text-surface-400"
                 >
                   {task.isCollapsed ? (
@@ -256,7 +264,7 @@ export function TaskItem({ task, depth, ancestorIds, isDragEnabled, isOverlay }:
             style={{ left: contextMenu.x, top: contextMenu.y }}
           >
             <button
-              onClick={() => { setSelectedTask(task.id); setContextMenu(null); }}
+              onClick={() => { setSelectedTaskMutation.mutate(task.id); setContextMenu(null); }}
               className="w-full flex items-center gap-2 px-3 py-2 text-sm text-surface-700 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700"
             >
               <Edit2 className="w-4 h-4" />
@@ -264,7 +272,7 @@ export function TaskItem({ task, depth, ancestorIds, isDragEnabled, isOverlay }:
             </button>
             {/* todo: implement duplicate func. low priority rn */}
             <button
-              onClick={() => { toggleTaskComplete(task.id); setContextMenu(null); }}
+              onClick={() => { toggleTaskCompleteMutation.mutate(task.id); setContextMenu(null); }}
               className="w-full flex items-center gap-2 px-3 py-2 text-sm text-surface-700 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700"
             >
               <CheckCircle2 className="w-4 h-4" />
@@ -291,7 +299,7 @@ export function TaskItem({ task, depth, ancestorIds, isDragEnabled, isOverlay }:
 
       {showExportModal && (
         <ExportModal
-          tasks={[task, ...(exportTaskAndChildren(task.id)?.descendants || [])]}
+          tasks={[task, ...(taskData.exportTaskAndChildren(task.id)?.descendants || [])]}
           fileName={task.title.replace(/[^a-z0-9]/gi, '-').toLowerCase() || 'task'}
           type="tasks"
           onClose={() => setShowExportModal(false)}

@@ -20,7 +20,7 @@ import ListTodo from 'lucide-react/icons/list-todo';
 import Pencil from 'lucide-react/icons/pencil';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
-import { useTaskStore } from '@/store/taskStore';
+import { useAccounts, useTags, useDeleteAccount } from '@/hooks/queries';
 import { useSettingsStore, type Theme, type StartOfWeek, type KeyboardShortcut, type SubtaskDeletionBehavior } from '@/store/settingsStore';
 import { useModalEscapeKey } from '@/hooks/useModalEscapeKey';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
@@ -67,7 +67,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
     account: 'connections',
     about: 'version',
   });
-  const { accounts } = useTaskStore();
+  const { data: accounts = [] } = useAccounts();
 
   // handle ESC key to close modal
   useModalEscapeKey(onClose);
@@ -154,7 +154,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                         }}
                         className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 ${
                           isActiveTab
-                            ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-800'
+                            ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-400'
                             : 'text-surface-600 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-700 border border-transparent'
                         }`}
                       >
@@ -273,7 +273,7 @@ function BehaviorSettings() {
     defaultCalendarId,
     setDefaultCalendarId,
   } = useSettingsStore();
-  const { accounts } = useTaskStore();
+  const { data: accounts = [] } = useAccounts();
   
   // Get all calendars from all accounts
   const allCalendars = accounts.flatMap(account => 
@@ -363,7 +363,7 @@ function TaskDefaultsSettings() {
     defaultTags,
     setDefaultTags,
   } = useSettingsStore();
-  const { tags } = useTaskStore();
+  const { data: tags = [] } = useTags();
 
   const priorities: { value: Priority; label: string; color: string }[] = [
     { value: 'none', label: 'None', color: 'surface' },
@@ -619,7 +619,7 @@ function DataSettings() {
 }
 
 function ConnectionsSettings({ accounts }: { accounts: Account[] }) {
-  const { deleteAccount } = useTaskStore();
+  const deleteAccountMutation = useDeleteAccount();
   const { confirm } = useConfirmDialog();
   const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set());
 
@@ -644,7 +644,7 @@ function ConnectionsSettings({ accounts }: { accounts: Account[] }) {
       destructive: true,
     });
     if (confirmed) {
-      deleteAccount(account.id);
+      deleteAccountMutation.mutate(account.id);
     }
   };
 
