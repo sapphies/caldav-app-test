@@ -18,6 +18,11 @@ export interface Subtask {
   completed: boolean;
 }
 
+export interface Reminder {
+  id: string;
+  trigger: Date; // absolute date/time when the reminder should fire
+}
+
 export interface Task {
   id: string;
   uid: string; // CalDAV UID
@@ -42,6 +47,9 @@ export interface Task {
   dueDateAllDay?: boolean; // if true, dueDate is all-day (no time component)
   createdAt: Date;
   modifiedAt: Date;
+  
+  // reminders
+  reminders?: Reminder[];
   
   // subtasks / checklist (deprecated - use parentUid instead)
   subtasks: Subtask[];

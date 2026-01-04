@@ -9,6 +9,7 @@ import {
   SortConfig,
   Priority,
   Subtask,
+  Reminder,
 } from '@/types';
 import { toAppleEpoch } from '../utils/ical';
 import { FlattenedTask } from '../utils/tree';
@@ -52,6 +53,10 @@ interface TaskStore {
   toggleTaskCollapsed: (id: string) => void;
   addTagToTask: (taskId: string, tagId: string) => void;
   removeTagFromTask: (taskId: string, tagId: string) => void;
+
+  // reminder actions
+  addReminder: (taskId: string, trigger: Date) => void;
+  removeReminder: (taskId: string, reminderId: string) => void;
 
   // tag actions
   addTag: (tag: Partial<Tag>) => Tag;
@@ -652,6 +657,41 @@ export const useTaskStore = create<TaskStore>()(
               ? {
                   ...task,
                   tags: (task.tags || []).filter(t => t !== tagId),
+                  modifiedAt: new Date(),
+                  synced: false,
+                }
+              : task
+          ),
+        }));
+      },
+
+      // reminder actions
+      addReminder: (taskId, trigger) => {
+        const reminder: Reminder = {
+          id: uuidv4(),
+          trigger,
+        };
+        set((state) => ({
+          tasks: state.tasks.map((task) =>
+            task.id === taskId
+              ? {
+                  ...task,
+                  reminders: [...(task.reminders || []), reminder],
+                  modifiedAt: new Date(),
+                  synced: false,
+                }
+              : task
+          ),
+        }));
+      },
+
+      removeReminder: (taskId, reminderId) => {
+        set((state) => ({
+          tasks: state.tasks.map((task) =>
+            task.id === taskId
+              ? {
+                  ...task,
+                  reminders: (task.reminders || []).filter(r => r.id !== reminderId),
                   modifiedAt: new Date(),
                   synced: false,
                 }

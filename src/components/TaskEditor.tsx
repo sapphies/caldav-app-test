@@ -9,6 +9,7 @@ import Plus from 'lucide-react/icons/plus';
 import CheckCircle2 from 'lucide-react/icons/check-circle-2';
 import Tag from 'lucide-react/icons/tag';
 import FolderSync from 'lucide-react/icons/folder-sync';
+import Bell from 'lucide-react/icons/bell';
 import { useTaskStore } from '@/store/taskStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { Task, Priority } from '@/types';
@@ -44,6 +45,8 @@ export function TaskEditor({ task }: TaskEditorProps) {
     removeTagFromTask,
     getTagById,
     accounts,
+    addReminder,
+    removeReminder,
   } = useTaskStore();
   const { accentColor } = useSettingsStore();
   const { confirmAndDelete } = useConfirmTaskDelete();
@@ -54,6 +57,8 @@ export function TaskEditor({ task }: TaskEditorProps) {
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [showTagPicker, setShowTagPicker] = useState(false);
   const [expandedSubtasks, setExpandedSubtasks] = useState<Set<string>>(new Set());
+  const [showReminderPicker, setShowReminderPicker] = useState(false);
+  const [newReminderDate, setNewReminderDate] = useState<Date | undefined>(undefined);
   const titleRef = useRef<HTMLInputElement>(null);
   const childTasks = getChildTasks(task.uid);
   const childCount = countChildren(task.uid);
@@ -116,6 +121,14 @@ export function TaskEditor({ task }: TaskEditorProps) {
 
   const handleDueDateAllDayChange = (allDay: boolean) => {
     updateTask(task.id, { dueDateAllDay: allDay });
+  };
+
+  const handleAddReminder = (date: Date) => {
+    addReminder(task.id, date);
+  };
+
+  const handleRemoveReminder = (reminderId: string) => {
+    removeReminder(task.id, reminderId);
   };
 
   const handleAddChildTask = () => {
@@ -357,6 +370,74 @@ export function TaskEditor({ task }: TaskEditorProps) {
                 </>
               )}
             </div>
+          </div>
+        </div>
+
+        <div>
+          <label className="flex items-center gap-2 text-sm font-medium text-surface-600 dark:text-surface-400 mb-2">
+            <Bell className="w-4 h-4" />
+            Reminders {(task.reminders?.length || 0) > 0 && `(${task.reminders?.length})`}
+          </label>
+          <div className="space-y-2">
+            {(task.reminders || []).map((reminder) => (
+              <div
+                key={reminder.id}
+                className="flex items-center gap-2 px-3 py-2 bg-surface-50 dark:bg-surface-700 rounded-lg group"
+              >
+                <Bell className="w-4 h-4 text-surface-400 flex-shrink-0" />
+                <span className="flex-1 text-sm text-surface-700 dark:text-surface-300">
+                  {format(new Date(reminder.trigger), 'MMM d, yyyy h:mm a')}
+                </span>
+                <button
+                  onClick={() => handleRemoveReminder(reminder.id)}
+                  className="p-1 text-surface-400 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+            
+            {showReminderPicker ? (
+              <div className="space-y-2">
+                <DateTimePicker
+                  value={newReminderDate}
+                  onChange={(date) => setNewReminderDate(date)}
+                  placeholder="Select reminder time..."
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      if (newReminderDate) {
+                        handleAddReminder(newReminderDate);
+                        setNewReminderDate(undefined);
+                        setShowReminderPicker(false);
+                      }
+                    }}
+                    disabled={!newReminderDate}
+                    className="flex-1 px-3 py-1.5 text-xs font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:bg-surface-300 dark:disabled:bg-surface-600 rounded transition-colors"
+                  >
+                    Add Reminder
+                  </button>
+                  <button
+                    onClick={() => {
+                      setNewReminderDate(undefined);
+                      setShowReminderPicker(false);
+                    }}
+                    className="px-3 py-1.5 text-xs font-medium text-surface-600 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-700 rounded transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowReminderPicker(true)}
+                className="inline-flex items-center gap-1 px-2 py-1 text-xs text-surface-500 dark:text-surface-400 border border-dashed border-surface-300 dark:border-surface-600 rounded-full hover:border-surface-400 dark:hover:border-surface-500 transition-colors"
+              >
+                <Plus className="w-3 h-3" />
+                Add reminder
+              </button>
+            )}
           </div>
         </div>
 

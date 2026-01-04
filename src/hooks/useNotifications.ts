@@ -57,12 +57,13 @@ async function showNotification(options: NotificationOptions): Promise<void> {
 }
 
 /**
- * hook that monitors tasks and shows notifications for due tasks
+ * hook that monitors tasks and shows notifications for due tasks and reminders
  */
 export function useNotifications() {
   const { tasks } = useTaskStore();
   const { notifications, notifyBefore } = useSettingsStore();
   const notifiedTasksRef = useRef<Set<string>>(new Set());
+  const notifiedRemindersRef = useRef<Set<string>>(new Set());
   const checkIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -79,11 +80,36 @@ export function useNotifications() {
       const now = new Date();
 
       for (const task of tasks) {
-        // skip completed tasks or tasks without due dates
-        if (task.completed || !task.dueDate) continue;
+        // skip completed tasks
+        if (task.completed) continue;
+
+        // Check reminders (VALARM)
+        if (task.reminders && task.reminders.length > 0) {
+          for (const reminder of task.reminders) {
+            const reminderKey = `reminder-${task.id}-${reminder.id}`;
+            
+            // skip if we already notified about this reminder
+            if (notifiedRemindersRef.current.has(reminderKey)) continue;
+            
+            const reminderDate = new Date(reminder.trigger);
+            const minutesUntilReminder = differenceInMinutes(reminderDate, now);
+            
+            // Fire reminder when it's time (within 1 minute window)
+            if (minutesUntilReminder <= 0 && minutesUntilReminder >= -1) {
+              showNotification({
+                title: 'Task Reminder',
+                body: task.title,
+              });
+              notifiedRemindersRef.current.add(reminderKey);
+            }
+          }
+        }
+
+        // Check due dates
+        if (!task.dueDate) continue;
 
         const dueDate = new Date(task.dueDate);
-        const taskKey = `${task.id}-${dueDate.getTime()}`;
+        const taskKey = `due-${task.id}-${dueDate.getTime()}`;
 
         // skip if we already notified about this task
         if (notifiedTasksRef.current.has(taskKey)) continue;
@@ -123,6 +149,9 @@ export function useNotifications() {
       // clean up old notification records (keep only recent ones)
       if (notifiedTasksRef.current.size > 1000) {
         notifiedTasksRef.current.clear();
+      }
+      if (notifiedRemindersRef.current.size > 1000) {
+        notifiedRemindersRef.current.clear();
       }
     };
 

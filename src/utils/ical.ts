@@ -3,7 +3,7 @@
  * Replaces ical.js (~266KB) with minimal implementation for VTODO support
  */
 
-import { Task, Priority, Subtask } from '@/types';
+import { Task, Priority, Subtask, Reminder } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { useTaskStore } from '@/store/taskStore';
 
@@ -215,6 +215,12 @@ function parseProperty(line: string): ICalProperty | null {
   return { name, params, value };
 }
 
+interface ParsedVAlarm {
+  action?: string;
+  trigger?: Date;
+  description?: string;
+}
+
 interface ParsedVTodo {
   uid?: string;
   summary?: string;
@@ -233,6 +239,78 @@ interface ParsedVTodo {
   subtasksJson?: string;
   isCollapsed?: boolean;
   parentUid?: string;
+  alarms?: ParsedVAlarm[];
+}
+
+/**
+ * Parse VALARM content into structured data
+ */
+function parseVAlarm(valarmContent: string): ParsedVAlarm {
+  const result: ParsedVAlarm = {};
+  const lines = unfoldLines(valarmContent).split('\n');
+  
+  for (const line of lines) {
+    if (!line.trim() || line.startsWith('BEGIN:') || line.startsWith('END:')) {
+      continue;
+    }
+    
+    const prop = parseProperty(line);
+    if (!prop) continue;
+    
+    switch (prop.name) {
+      case 'ACTION':
+        result.action = prop.value.toUpperCase();
+        break;
+      case 'DESCRIPTION':
+        result.description = unescapeICalText(prop.value);
+        break;
+      case 'TRIGGER':
+        // Support both VALUE=DATE-TIME and relative triggers
+        if (prop.params['VALUE'] === 'DATE-TIME') {
+          result.trigger = parseICalDate(prop.value);
+        } else if (prop.value.startsWith('P') || prop.value.startsWith('-P')) {
+          // Relative trigger (e.g., -PT15M = 15 minutes before)
+          // For now, we skip relative triggers since we use absolute times
+        } else {
+          // Try parsing as absolute time
+          result.trigger = parseICalDate(prop.value);
+        }
+        break;
+    }
+  }
+  
+  return result;
+}
+
+/**
+ * Extract VALARM blocks from VTODO content
+ */
+function extractVAlarms(vtodoContent: string): string[] {
+  const alarms: string[] = [];
+  const content = unfoldLines(vtodoContent);
+  const lines = content.split('\n');
+  
+  let inAlarm = false;
+  let currentAlarm: string[] = [];
+  
+  for (const line of lines) {
+    const trimmed = line.trim().toUpperCase();
+    
+    if (trimmed === 'BEGIN:VALARM') {
+      inAlarm = true;
+      currentAlarm = [];
+    } else if (trimmed === 'END:VALARM') {
+      if (inAlarm) {
+        alarms.push(currentAlarm.join('\n'));
+        currentAlarm = [];
+      }
+      inAlarm = false;
+    } else if (inAlarm) {
+      currentAlarm.push(line);
+    }
+  }
+  
+  return alarms;
 }
 
 /**
@@ -241,6 +319,12 @@ interface ParsedVTodo {
 function parseVTodo(vtodoContent: string): ParsedVTodo {
   const result: ParsedVTodo = {};
   const lines = unfoldLines(vtodoContent).split('\n');
+
+  // Extract and parse VALARMs first
+  const alarmContents = extractVAlarms(vtodoContent);
+  if (alarmContents.length > 0) {
+    result.alarms = alarmContents.map(parseVAlarm).filter(a => a.trigger);
+  }
   
   for (const line of lines) {
     if (!line.trim() || line.startsWith('BEGIN:') || line.startsWith('END:')) {
@@ -343,6 +427,20 @@ function extractVTodos(icalContent: string): string[] {
 }
 
 /**
+ * Generate a VALARM component as string
+ */
+function generateVAlarm(reminder: Reminder): string {
+  const lines: string[] = [];
+  
+  lines.push('BEGIN:VALARM');
+  lines.push('ACTION:DISPLAY');
+  lines.push(`TRIGGER;VALUE=DATE-TIME:${formatICalDate(new Date(reminder.trigger))}`);
+  lines.push('END:VALARM');
+  
+  return lines.join('\r\n');
+}
+
+/**
  * Generate a VTODO component as string
  */
 function generateVTodo(task: Task): string {
@@ -413,6 +511,13 @@ function generateVTodo(task: Task): string {
     const subtasksJson = JSON.stringify(task.subtasks);
     lines.push(`X-CALDAV-TASKS-SUBTASKS:${subtasksJson}`);
   }
+
+  // Reminders as VALARMs
+  if (task.reminders && task.reminders.length > 0) {
+    for (const reminder of task.reminders) {
+      lines.push(generateVAlarm(reminder));
+    }
+  }
   
   lines.push('END:VTODO');
   
@@ -475,6 +580,17 @@ export function vtodoToTask(
         subtasks = [];
       }
     }
+
+    // Parse reminders from alarms
+    let reminders: Reminder[] | undefined;
+    if (parsed.alarms && parsed.alarms.length > 0) {
+      reminders = parsed.alarms
+        .filter(a => a.trigger)
+        .map(a => ({
+          id: uuidv4(),
+          trigger: a.trigger!,
+        }));
+    }
     
     // Calculate sort order
     const createdDate = parsed.created || new Date();
@@ -509,6 +625,7 @@ export function vtodoToTask(
       accountId,
       calendarId,
       synced: true,
+      reminders,
     };
     
     return task;
@@ -632,6 +749,17 @@ export function parseIcsFile(icsContent: string): Partial<Task>[] {
           subtasks = [];
         }
       }
+
+      // Parse reminders from alarms
+      let reminders: Reminder[] | undefined;
+      if (parsed.alarms && parsed.alarms.length > 0) {
+        reminders = parsed.alarms
+          .filter(a => a.trigger)
+          .map(a => ({
+            id: uuidv4(),
+            trigger: a.trigger!,
+          }));
+      }
       
       // Calculate sort order
       const createdDate = parsed.created || new Date();
@@ -662,6 +790,7 @@ export function parseIcsFile(icsContent: string): Partial<Task>[] {
         isCollapsed: parsed.isCollapsed || false,
         sortOrder,
         synced: false,
+        reminders,
       });
     }
     
