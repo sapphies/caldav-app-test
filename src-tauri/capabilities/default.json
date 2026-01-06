@@ -20,6 +20,8 @@
     "dialog:default",
     "fs:default",
     "shell:allow-open",
-    "notification:default"
+    "notification:default",
+    "sql:default",
+    "sql:allow-execute"
   ]
 }

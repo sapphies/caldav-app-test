@@ -1,7 +1,7 @@
 /**
  * Task data persistence layer
  * This module handles the storage and retrieval of tasks, accounts, tags, and UI state
- * It uses localStorage for now, but can be swapped out for SQLite later
+ * Uses SQLite via Tauri SQL plugin with in-memory cache for synchronous access
  */
 
 import { v4 as uuidv4 } from 'uuid';
@@ -17,9 +17,10 @@ import {
 } from '@/types';
 import { toAppleEpoch } from '@/utils/ical';
 import { useSettingsStore } from '@/store/settingsStore';
+import * as db from './database';
+import { loggers } from './logger';
 
-// Storage key
-const STORAGE_KEY = 'caldav-tasks-data';
+const log = loggers.taskData;
 
 // Pending deletion interface
 export interface PendingDeletion {
@@ -73,6 +74,8 @@ const defaultDataStore: DataStore = {
 
 // In-memory cache of the data store
 let dataStoreCache: DataStore | null = null;
+let isInitialized = false;
+let initPromise: Promise<void> | null = null;
 
 // Event listeners for data changes
 type DataChangeListener = () => void;
@@ -80,73 +83,55 @@ const listeners: Set<DataChangeListener> = new Set();
 
 export function subscribeToDataChanges(listener: DataChangeListener): () => void {
   listeners.add(listener);
-  return () => listeners.delete(listener);
+  // Also subscribe to database changes
+  db.subscribeToDataChanges(listener);
+  return () => {
+    listeners.delete(listener);
+  };
 }
 
 function notifyListeners(): void {
   listeners.forEach(listener => listener());
 }
 
-// Helper to revive dates from JSON
-function reviveDates(obj: any): any {
-  if (obj === null || obj === undefined) return obj;
-  if (typeof obj === 'string') {
-    // Check if it's an ISO date string
-    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(obj)) {
-      return new Date(obj);
-    }
-    return obj;
-  }
-  if (Array.isArray(obj)) {
-    return obj.map(reviveDates);
-  }
-  if (typeof obj === 'object') {
-    const result: any = {};
-    for (const key of Object.keys(obj)) {
-      result[key] = reviveDates(obj[key]);
-    }
-    return result;
-  }
-  return obj;
+// Initialize the database and load data into cache
+export async function initializeDataStore(): Promise<void> {
+  if (isInitialized) return;
+  if (initPromise) return initPromise;
+  
+  initPromise = (async () => {
+    await db.initDatabase();
+    await refreshCache();
+    isInitialized = true;
+    log.info('Data store initialized with SQLite');
+  })();
+  
+  return initPromise;
 }
 
-// Load data from storage
-function loadDataStore(): DataStore {
-  if (dataStoreCache) return dataStoreCache;
-  
+// Refresh cache from database
+async function refreshCache(): Promise<void> {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      // Revive dates and merge with defaults for any missing fields
-      dataStoreCache = {
-        ...defaultDataStore,
-        ...reviveDates(parsed),
-        ui: {
-          ...defaultUIState,
-          ...reviveDates(parsed.ui || {}),
-        },
-      };
-    } else {
-      dataStoreCache = { ...defaultDataStore };
-    }
+    dataStoreCache = await db.getDataSnapshot();
   } catch (error) {
-    console.error('[TaskData] Failed to load data store:', error);
-    dataStoreCache = { ...defaultDataStore };
+    log.error('Failed to refresh cache:', error);
   }
-  
-  return dataStoreCache!;
 }
 
-// Save data to storage
+// Load data from cache (must be initialized first)
+function loadDataStore(): DataStore {
+  if (!dataStoreCache) {
+    log.warn('Data store not initialized, returning defaults');
+    return { ...defaultDataStore };
+  }
+  return dataStoreCache;
+}
+
+// Save data to cache and notify listeners
+// Note: Individual operations must call db.* functions to persist to SQLite
 function saveDataStore(data: DataStore): void {
   dataStoreCache = data;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    notifyListeners();
-  } catch (error) {
-    console.error('[TaskData] Failed to save data store:', error);
-  }
+  notifyListeners();
 }
 
 // Get a snapshot of the current data
@@ -245,6 +230,9 @@ export function createTask(taskData: Partial<Task>): Task {
     }
   }
   
+  // Determine if this is a local-only task (no calendar/account assigned)
+  const isLocalOnly = !calendarId || !accountId;
+  
   // Calculate sort order using Apple epoch format
   const maxSortOrder = data.tasks.length > 0 
     ? Math.max(...data.tasks.map(t => t.sortOrder)) 
@@ -264,6 +252,7 @@ export function createTask(taskData: Partial<Task>): Task {
     synced: false,
     createdAt: now,
     modifiedAt: now,
+    localOnly: isLocalOnly,
     ...taskData,
     // Apply tags after spread to ensure activeTagId is included
     tags,
@@ -273,6 +262,11 @@ export function createTask(taskData: Partial<Task>): Task {
     ...data,
     tasks: [...data.tasks, task],
   });
+  
+  // Persist to SQLite (including local-only tasks)
+  if (isInitialized) {
+    db.createTask(task).catch(e => log.error('Failed to sync task to database:', e));
+  }
   
   return task;
 }
@@ -296,6 +290,11 @@ export function updateTask(id: string, updates: Partial<Task>): Task | undefined
     return task;
   });
   
+  // Persist to SQLite
+  if (updatedTask) {
+    db.updateTask(id, updatedTask).catch(e => log.error('Failed to persist task update:', e));
+  }
+  
   saveDataStore({ ...data, tasks });
   return updatedTask;
 }
@@ -304,6 +303,9 @@ export function deleteTask(id: string, deleteChildren: boolean = true): void {
   const data = loadDataStore();
   const task = data.tasks.find(t => t.id === id);
   if (!task) return;
+  
+  // Persist to SQLite
+  db.deleteTask(id, deleteChildren).catch(e => log.error('Failed to persist task deletion:', e));
   
   // Get all descendants recursively
   const getAllDescendantIds = (parentUid: string): string[] => {
@@ -354,31 +356,41 @@ export function deleteTask(id: string, deleteChildren: boolean = true): void {
 
 export function toggleTaskComplete(id: string): void {
   const data = loadDataStore();
-  const tasks = data.tasks.map(task =>
-    task.id === id
-      ? {
-          ...task,
-          completed: !task.completed,
-          completedAt: !task.completed ? new Date() : undefined,
-          modifiedAt: new Date(),
-          synced: false,
-        }
-      : task
+  const task = data.tasks.find(t => t.id === id);
+  if (!task) return;
+  
+  const updates = {
+    completed: !task.completed,
+    completedAt: !task.completed ? new Date() : undefined,
+    modifiedAt: new Date(),
+    synced: false,
+  };
+  
+  // Persist to SQLite
+  db.updateTask(id, updates).catch(e => log.error('Failed to persist task toggle:', e));
+  
+  const tasks = data.tasks.map(t =>
+    t.id === id ? { ...t, ...updates } : t
   );
   saveDataStore({ ...data, tasks });
 }
 
 export function toggleTaskCollapsed(id: string): void {
   const data = loadDataStore();
-  const tasks = data.tasks.map(task =>
-    task.id === id
-      ? {
-          ...task,
-          isCollapsed: !task.isCollapsed,
-          modifiedAt: new Date(),
-          synced: false,
-        }
-      : task
+  const task = data.tasks.find(t => t.id === id);
+  if (!task) return;
+  
+  const updates = {
+    isCollapsed: !task.isCollapsed,
+    modifiedAt: new Date(),
+    synced: false,
+  };
+  
+  // Persist to SQLite
+  db.updateTask(id, updates).catch(e => log.error('Failed to persist task collapse:', e));
+  
+  const tasks = data.tasks.map(t =>
+    t.id === id ? { ...t, ...updates } : t
   );
   saveDataStore({ ...data, tasks });
 }
@@ -847,10 +859,14 @@ export function createTag(tagData: Partial<Tag>): Tag {
   const data = loadDataStore();
   const tag: Tag = {
     id: uuidv4(),
-    name: tagData.name || 'New Tag',
-    color: tagData.color || '#3b82f6',
+    name: tagData.name ?? 'New Tag',
+    color: tagData.color ?? '#3b82f6',
     icon: tagData.icon,
   };
+  
+  // Persist to SQLite
+  db.createTag(tag).catch(e => log.error('Failed to persist tag:', e));
+  
   saveDataStore({ ...data, tags: [...data.tags, tag] });
   return tag;
 }
@@ -867,12 +883,21 @@ export function updateTag(id: string, updates: Partial<Tag>): Tag | undefined {
     return tag;
   });
   
+  // Persist to SQLite
+  if (updatedTag) {
+    db.updateTag(id, updates).catch(e => log.error('Failed to persist tag update:', e));
+  }
+  
   saveDataStore({ ...data, tags });
   return updatedTag;
 }
 
 export function deleteTag(id: string): void {
   const data = loadDataStore();
+  
+  // Persist to SQLite
+  db.deleteTag(id).catch(e => log.error('Failed to persist tag deletion:', e));
+  
   saveDataStore({
     ...data,
     tags: data.tags.filter(tag => tag.id !== id),
@@ -909,6 +934,9 @@ export function createAccount(accountData: Partial<Account>): Account {
     isActive: true,
   };
   
+  // Persist to SQLite
+  db.createAccount(account).catch(e => log.error('Failed to persist account:', e));
+  
   saveDataStore({
     ...data,
     accounts: [...data.accounts, account],
@@ -932,6 +960,11 @@ export function updateAccount(id: string, updates: Partial<Account>): Account | 
     return acc;
   });
   
+  // Persist to SQLite
+  if (updatedAccount) {
+    db.updateAccount(id, updates).catch(e => log.error('Failed to persist account update:', e));
+  }
+  
   saveDataStore({ ...data, accounts });
   return updatedAccount;
 }
@@ -939,6 +972,10 @@ export function updateAccount(id: string, updates: Partial<Account>): Account | 
 export function deleteAccount(id: string): void {
   const data = loadDataStore();
   const newAccounts = data.accounts.filter(acc => acc.id !== id);
+  
+  // Persist to SQLite
+  db.deleteAccount(id).catch(e => log.error('Failed to persist account deletion:', e));
+  
   saveDataStore({
     ...data,
     accounts: newAccounts,
@@ -962,7 +999,39 @@ export function addCalendar(accountId: string, calendarData: Partial<Calendar>):
     accountId,
   };
 
-  console.log(`[TaskData] Adding calendar: ${calendar.displayName} with ID: ${calendar.id}`);
+  log.info(`Adding calendar: ${calendar.displayName} with ID: ${calendar.id}`);
+
+  // Persist to SQLite
+  db.addCalendar(accountId, calendar).catch(e => log.error('Failed to persist calendar:', e));
+
+  // Check if this is the first calendar being added
+  const allCalendars = data.accounts.flatMap(acc => acc.calendars);
+  const isFirstCalendar = allCalendars.length === 0;
+
+  // Assign local-only tasks to this calendar if it's the first one
+  let updatedTasks = data.tasks;
+  if (isFirstCalendar) {
+    updatedTasks = data.tasks.map(task => {
+      if (task.localOnly || !task.calendarId || !task.accountId) {
+        log.info(`Assigning local-only task "${task.title}" to calendar: ${calendar.displayName}`);
+        
+        const updatedTask = {
+          ...task,
+          calendarId: calendar.id,
+          accountId: accountId,
+          localOnly: false,
+          synced: false,
+          modifiedAt: new Date(),
+        };
+        
+        // Create the task in the database now that it has a valid calendar
+        db.createTask(updatedTask).catch(e => log.error('Failed to persist task:', e));
+        
+        return updatedTask;
+      }
+      return task;
+    });
+  }
 
   saveDataStore({
     ...data,
@@ -971,6 +1040,7 @@ export function addCalendar(accountId: string, calendarData: Partial<Calendar>):
         ? { ...acc, calendars: [...acc.calendars, calendar] }
         : acc
     ),
+    tasks: updatedTasks,
     ui: {
       ...data.ui,
       activeCalendarId: data.ui.activeCalendarId || calendar.id,
@@ -980,6 +1050,9 @@ export function addCalendar(accountId: string, calendarData: Partial<Calendar>):
 
 export function deleteCalendar(accountId: string, calendarId: string): void {
   const data = loadDataStore();
+  
+  // Persist to SQLite
+  db.deleteCalendar(accountId, calendarId).catch(e => log.error('Failed to persist calendar deletion:', e));
   
   // Get all tasks to delete and track for server deletion
   const tasksToDelete = data.tasks.filter(t => t.calendarId === calendarId);
@@ -1027,6 +1100,10 @@ export function getPendingDeletions(): PendingDeletion[] {
 
 export function clearPendingDeletion(uid: string): void {
   const data = loadDataStore();
+  
+  // Persist to SQLite
+  db.clearPendingDeletion(uid).catch(e => log.error('Failed to persist pending deletion clear:', e));
+  
   saveDataStore({
     ...data,
     pendingDeletions: data.pendingDeletions.filter(d => d.uid !== uid),
@@ -1040,6 +1117,10 @@ export function getUIState(): UIState {
 
 export function setActiveAccount(id: string | null): void {
   const data = loadDataStore();
+  
+  // Persist to SQLite
+  db.setActiveAccount(id).catch(e => log.error('Failed to persist active account:', e));
+  
   saveDataStore({
     ...data,
     ui: { ...data.ui, activeAccountId: id, activeCalendarId: null },
@@ -1048,6 +1129,10 @@ export function setActiveAccount(id: string | null): void {
 
 export function setActiveCalendar(id: string | null): void {
   const data = loadDataStore();
+  
+  // Persist to SQLite
+  db.setActiveCalendar(id).catch(e => log.error('Failed to persist active calendar:', e));
+  
   saveDataStore({
     ...data,
     ui: {
@@ -1062,6 +1147,10 @@ export function setActiveCalendar(id: string | null): void {
 
 export function setActiveTag(id: string | null): void {
   const data = loadDataStore();
+  
+  // Persist to SQLite
+  db.setActiveTag(id).catch(e => log.error('Failed to persist active tag:', e));
+  
   saveDataStore({
     ...data,
     ui: {
@@ -1076,6 +1165,10 @@ export function setActiveTag(id: string | null): void {
 
 export function setAllTasksView(): void {
   const data = loadDataStore();
+  
+  // Persist to SQLite
+  db.setAllTasksView().catch(e => log.error('Failed to persist all tasks view:', e));
+  
   saveDataStore({
     ...data,
     ui: {
@@ -1090,6 +1183,10 @@ export function setAllTasksView(): void {
 
 export function setSelectedTask(id: string | null): void {
   const data = loadDataStore();
+  
+  // Persist to SQLite
+  db.setSelectedTask(id).catch(e => log.error('Failed to persist selected task:', e));
+  
   saveDataStore({
     ...data,
     ui: {
@@ -1102,6 +1199,10 @@ export function setSelectedTask(id: string | null): void {
 
 export function setEditorOpen(open: boolean): void {
   const data = loadDataStore();
+  
+  // Persist to SQLite
+  db.setEditorOpen(open).catch(e => log.error('Failed to persist editor open:', e));
+  
   saveDataStore({
     ...data,
     ui: {
@@ -1114,6 +1215,10 @@ export function setEditorOpen(open: boolean): void {
 
 export function setSearchQuery(query: string): void {
   const data = loadDataStore();
+  
+  // Persist to SQLite
+  db.setSearchQuery(query).catch(e => log.error('Failed to persist search query:', e));
+  
   saveDataStore({
     ...data,
     ui: { ...data.ui, searchQuery: query },
@@ -1122,6 +1227,10 @@ export function setSearchQuery(query: string): void {
 
 export function setSortConfig(config: SortConfig): void {
   const data = loadDataStore();
+  
+  // Persist to SQLite
+  db.setSortConfig(config).catch(e => log.error('Failed to persist sort config:', e));
+  
   saveDataStore({
     ...data,
     ui: { ...data.ui, sortConfig: config },
@@ -1130,6 +1239,10 @@ export function setSortConfig(config: SortConfig): void {
 
 export function setShowCompletedTasks(show: boolean): void {
   const data = loadDataStore();
+  
+  // Persist to SQLite
+  db.setShowCompletedTasks(show).catch(e => log.error('Failed to persist show completed:', e));
+  
   saveDataStore({
     ...data,
     ui: { ...data.ui, showCompletedTasks: show },
