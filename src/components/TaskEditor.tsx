@@ -11,6 +11,7 @@ import CheckCircle2 from 'lucide-react/icons/check-circle-2';
 import Tag from 'lucide-react/icons/tag';
 import FolderSync from 'lucide-react/icons/folder-sync';
 import Bell from 'lucide-react/icons/bell';
+import Pencil from 'lucide-react/icons/pencil';
 import { 
   useUpdateTask, 
   useSetEditorOpen,
@@ -21,6 +22,7 @@ import {
   useRemoveTagFromTask,
   useAddReminder,
   useRemoveReminder,
+  useUpdateReminder,
   useUpdateSubtask,
   useDeleteSubtask,
   useToggleSubtaskComplete,
@@ -53,6 +55,7 @@ export function TaskEditor({ task }: TaskEditorProps) {
   const removeTagFromTaskMutation = useRemoveTagFromTask();
   const addReminderMutation = useAddReminder();
   const removeReminderMutation = useRemoveReminder();
+  const updateReminderMutation = useUpdateReminder();
   const updateSubtaskMutation = useUpdateSubtask();
   const deleteSubtaskMutation = useDeleteSubtask();
   const toggleSubtaskCompleteMutation = useToggleSubtaskComplete();
@@ -69,6 +72,8 @@ export function TaskEditor({ task }: TaskEditorProps) {
   const [expandedSubtasks, setExpandedSubtasks] = useState<Set<string>>(new Set());
   const [showReminderPicker, setShowReminderPicker] = useState(false);
   const [newReminderDate, setNewReminderDate] = useState<Date | undefined>(undefined);
+  const [editingReminderId, setEditingReminderId] = useState<string | null>(null);
+  const [editReminderDate, setEditReminderDate] = useState<Date | undefined>(undefined);
   const titleRef = useRef<HTMLInputElement>(null);
   const childTasks = taskData.getChildTasks(task.uid);
   const childCount = taskData.countChildren(task.uid);
@@ -139,6 +144,22 @@ export function TaskEditor({ task }: TaskEditorProps) {
 
   const handleRemoveReminder = (reminderId: string) => {
     removeReminderMutation.mutate({ taskId: task.id, reminderId });
+  };
+
+  const handleUpdateReminder = (reminderId: string, trigger: Date) => {
+    updateReminderMutation.mutate({ taskId: task.id, reminderId, trigger });
+    setEditingReminderId(null);
+    setEditReminderDate(undefined);
+  };
+
+  const handleStartEditReminder = (reminder: { id: string; trigger: Date }) => {
+    setEditingReminderId(reminder.id);
+    setEditReminderDate(new Date(reminder.trigger));
+  };
+
+  const handleCancelEditReminder = () => {
+    setEditingReminderId(null);
+    setEditReminderDate(undefined);
   };
 
   const handleAddChildTask = () => {
@@ -390,20 +411,56 @@ export function TaskEditor({ task }: TaskEditorProps) {
           </label>
           <div className="space-y-2">
             {(task.reminders || []).map((reminder) => (
-              <div
-                key={reminder.id}
-                className="flex items-center gap-2 px-3 py-2 bg-surface-50 dark:bg-surface-700 rounded-lg group"
-              >
-                <Bell className="w-4 h-4 text-surface-400 flex-shrink-0" />
-                <span className="flex-1 text-sm text-surface-700 dark:text-surface-300">
-                  {format(new Date(reminder.trigger), 'MMM d, yyyy h:mm a')}
-                </span>
-                <button
-                  onClick={() => handleRemoveReminder(reminder.id)}
-                  className="p-1 text-surface-400 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+              <div key={reminder.id}>
+                {editingReminderId === reminder.id ? (
+                  <div className="space-y-2 p-2 bg-surface-50 dark:bg-surface-700 rounded-lg">
+                    <DateTimePicker
+                      value={editReminderDate}
+                      onChange={(date) => setEditReminderDate(date)}
+                      placeholder="Select reminder time..."
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          if (editReminderDate) {
+                            handleUpdateReminder(reminder.id, editReminderDate);
+                          }
+                        }}
+                        disabled={!editReminderDate}
+                        className="flex-1 px-3 py-1.5 text-xs font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:bg-surface-300 dark:disabled:bg-surface-600 rounded transition-colors"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={handleCancelEditReminder}
+                        className="px-3 py-1.5 text-xs font-medium text-surface-600 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-600 rounded transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 px-3 py-2 bg-surface-50 dark:bg-surface-700 rounded-lg group">
+                    <Bell className="w-4 h-4 text-surface-400 flex-shrink-0" />
+                    <span className="flex-1 text-sm text-surface-700 dark:text-surface-300">
+                      {format(new Date(reminder.trigger), 'MMM d, yyyy h:mm a')}
+                    </span>
+                    <button
+                      onClick={() => handleStartEditReminder(reminder)}
+                      className="p-1 text-surface-400 hover:text-primary-500 dark:hover:text-primary-400 opacity-0 group-hover:opacity-100 transition-all"
+                      title="Edit reminder"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleRemoveReminder(reminder.id)}
+                      className="p-1 text-surface-400 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                      title="Remove reminder"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
             
