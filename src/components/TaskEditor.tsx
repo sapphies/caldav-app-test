@@ -30,11 +30,14 @@ import {
 import * as taskData from '@/lib/taskData';
 import { useSettingsStore } from '@/store/settingsStore';
 import { Task, Priority } from '@/types';
-import { DateTimePicker } from './DateTimePicker';
 import { getContrastTextColor } from '../utils/color';
 import { useConfirmTaskDelete } from '@/hooks/useConfirmTaskDelete';
 import { getIconByName } from './IconPicker';
 import { SubtaskTreeItem } from './SubtaskTreeItem';
+import { DatePickerModal } from './modals/DatePickerModal';
+import { ReminderPickerModal } from './modals/ReminderPickerModal';
+import { TagPickerModal } from './modals/TagPickerModal';
+import { useModalEscapeKey } from '@/hooks/useModalEscapeKey';
 
 interface TaskEditorProps {
   task: Task;
@@ -71,9 +74,10 @@ export function TaskEditor({ task }: TaskEditorProps) {
   const [showTagPicker, setShowTagPicker] = useState(false);
   const [expandedSubtasks, setExpandedSubtasks] = useState<Set<string>>(new Set());
   const [showReminderPicker, setShowReminderPicker] = useState(false);
-  const [newReminderDate, setNewReminderDate] = useState<Date | undefined>(undefined);
   const [editingReminderId, setEditingReminderId] = useState<string | null>(null);
   const [editReminderDate, setEditReminderDate] = useState<Date | undefined>(undefined);
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showDueDatePicker, setShowDueDatePicker] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
   const childTasks = taskData.getChildTasks(task.uid);
   const childCount = taskData.countChildren(task.uid);
@@ -99,6 +103,9 @@ export function TaskEditor({ task }: TaskEditorProps) {
       titleRef.current.focus();
     }
   }, [task.id]);
+
+  // Handle escape key to close editor
+  useModalEscapeKey(() => setEditorOpenMutation.mutate(false));
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     updateTaskMutation.mutate({ id: task.id, updates: { title: e.target.value } });
@@ -246,26 +253,38 @@ export function TaskEditor({ task }: TaskEditorProps) {
               <Clock className="w-4 h-4" />
               Start Date
             </label>
-            <DateTimePicker
-              value={task.startDate ? new Date(task.startDate) : undefined}
-              onChange={handleStartDateChange}
-              placeholder="Set start date..."
-              allDay={task.startDateAllDay}
-              onAllDayChange={handleStartDateAllDayChange}
-            />
+            <button
+              onClick={() => setShowStartDatePicker(true)}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left bg-surface-50 dark:bg-surface-700 border border-surface-200 dark:border-surface-600 rounded-lg hover:border-surface-300 dark:hover:border-surface-500 focus:outline-none focus:border-primary-300 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/50 transition-colors"
+            >
+              <Calendar className="w-4 h-4 text-surface-400 flex-shrink-0" />
+              <span className={task.startDate ? 'text-surface-700 dark:text-surface-300' : 'text-surface-400'}>
+                {task.startDate 
+                  ? task.startDateAllDay
+                    ? format(new Date(task.startDate), 'MMM d, yyyy') + ' (All day)'
+                    : format(new Date(task.startDate), 'MMM d, yyyy h:mm a')
+                  : 'Set start date...'}
+              </span>
+            </button>
           </div>
           <div>
             <label className="flex items-center gap-2 text-sm font-medium text-surface-600 dark:text-surface-400 mb-2">
               <Calendar className="w-4 h-4" />
               Due Date
             </label>
-            <DateTimePicker
-              value={task.dueDate ? new Date(task.dueDate) : undefined}
-              onChange={handleDueDateChange}
-              placeholder="Set due date..."
-              allDay={task.dueDateAllDay}
-              onAllDayChange={handleDueDateAllDayChange}
-            />
+            <button
+              onClick={() => setShowDueDatePicker(true)}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left bg-surface-50 dark:bg-surface-700 border border-surface-200 dark:border-surface-600 rounded-lg hover:border-surface-300 dark:hover:border-surface-500 focus:outline-none focus:border-primary-300 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/50 transition-colors"
+            >
+              <Calendar className="w-4 h-4 text-surface-400 flex-shrink-0" />
+              <span className={task.dueDate ? 'text-surface-700 dark:text-surface-300' : 'text-surface-400'}>
+                {task.dueDate 
+                  ? task.dueDateAllDay
+                    ? format(new Date(task.dueDate), 'MMM d, yyyy') + ' (All day)'
+                    : format(new Date(task.dueDate), 'MMM d, yyyy h:mm a')
+                  : 'Set due date...'}
+              </span>
+            </button>
           </div>
         </div>
 
@@ -350,57 +369,13 @@ export function TaskEditor({ task }: TaskEditorProps) {
               );
             })}
             
-            <div className="relative">
-              <button
-                onClick={() => setShowTagPicker(!showTagPicker)}
-                className="inline-flex items-center gap-1 px-2 py-1 text-xs text-surface-500 dark:text-surface-400 border border-dashed border-surface-300 dark:border-surface-600 rounded-full hover:border-surface-400 dark:hover:border-surface-500 transition-colors"
-              >
-                <Plus className="w-3 h-3" />
-                Add tag
-              </button>
-                
-                {showTagPicker && availableTags.length > 0 && (
-                  <>
-                    <div 
-                      className="fixed inset-0 z-40" 
-                      onClick={() => setShowTagPicker(false)}
-                    />
-                    <div className="absolute top-full left-0 mt-1 z-50 bg-white dark:bg-surface-800 rounded-lg shadow-lg border border-surface-200 dark:border-surface-700 py-1 min-w-[150px]">
-                      {availableTags.map((tag) => {
-                        const TagIcon = getIconByName(tag.icon || 'tag');
-                        return (
-                          <button
-                            key={tag.id}
-                            onClick={() => {
-                              addTagToTaskMutation.mutate({ taskId: task.id, tagId: tag.id });
-                              setShowTagPicker(false);
-                            }}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors"
-                            style={{ color: tag.color }}
-                          >
-                            <TagIcon className="w-4 h-4" />
-                            {tag.name}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </>
-                )}
-                
-              {showTagPicker && availableTags.length === 0 && (
-                <>
-                  <div 
-                    className="fixed inset-0 z-40" 
-                    onClick={() => setShowTagPicker(false)}
-                  />
-                  <div className="absolute top-full left-0 mt-1 z-50 bg-white dark:bg-surface-800 rounded-lg shadow-lg border border-surface-200 dark:border-surface-700 py-2 px-3 min-w-[150px]">
-                    <p className="text-xs text-surface-500 dark:text-surface-400">
-                      {tags.length === 0 ? 'No tags created yet' : 'All tags assigned'}
-                    </p>
-                  </div>
-                </>
-              )}
-            </div>
+            <button
+              onClick={() => setShowTagPicker(true)}
+              className="inline-flex items-center gap-1 px-2 py-1 text-xs text-surface-500 dark:text-surface-400 border border-dashed border-surface-300 dark:border-surface-600 rounded-full hover:border-surface-400 dark:hover:border-surface-500 transition-colors"
+            >
+              <Plus className="w-3 h-3" />
+              Add tag
+            </button>
           </div>
         </div>
 
@@ -412,99 +387,36 @@ export function TaskEditor({ task }: TaskEditorProps) {
           <div className="space-y-2">
             {(task.reminders || []).map((reminder) => (
               <div key={reminder.id}>
-                {editingReminderId === reminder.id ? (
-                  <div className="space-y-2 p-2 bg-surface-50 dark:bg-surface-700 rounded-lg">
-                    <DateTimePicker
-                      value={editReminderDate}
-                      onChange={(date) => setEditReminderDate(date)}
-                      placeholder="Select reminder time..."
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => {
-                          if (editReminderDate) {
-                            handleUpdateReminder(reminder.id, editReminderDate);
-                          }
-                        }}
-                        disabled={!editReminderDate}
-                        className="flex-1 px-3 py-1.5 text-xs font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:bg-surface-300 dark:disabled:bg-surface-600 rounded transition-colors"
-                      >
-                        Save
-                      </button>
-                      <button
-                        onClick={handleCancelEditReminder}
-                        className="px-3 py-1.5 text-xs font-medium text-surface-600 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-600 rounded transition-colors"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 px-3 py-2 bg-surface-50 dark:bg-surface-700 rounded-lg group">
-                    <Bell className="w-4 h-4 text-surface-400 flex-shrink-0" />
-                    <span className="flex-1 text-sm text-surface-700 dark:text-surface-300">
-                      {format(new Date(reminder.trigger), 'MMM d, yyyy h:mm a')}
-                    </span>
-                    <button
-                      onClick={() => handleStartEditReminder(reminder)}
-                      className="p-1 text-surface-400 hover:text-primary-500 dark:hover:text-primary-400 opacity-0 group-hover:opacity-100 transition-all"
-                      title="Edit reminder"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleRemoveReminder(reminder.id)}
-                      className="p-1 text-surface-400 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
-                      title="Remove reminder"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
-            
-            {showReminderPicker ? (
-              <div className="space-y-2">
-                <DateTimePicker
-                  value={newReminderDate}
-                  onChange={(date) => setNewReminderDate(date)}
-                  placeholder="Select reminder time..."
-                />
-                <div className="flex gap-2">
+                <div className="flex items-center gap-2 px-3 py-2 bg-surface-50 dark:bg-surface-700 rounded-lg group">
+                  <Bell className="w-4 h-4 text-surface-400 flex-shrink-0" />
+                  <span className="flex-1 text-sm text-surface-700 dark:text-surface-300">
+                    {format(new Date(reminder.trigger), 'MMM d, yyyy h:mm a')}
+                  </span>
                   <button
-                    onClick={() => {
-                      if (newReminderDate) {
-                        handleAddReminder(newReminderDate);
-                        setNewReminderDate(undefined);
-                        setShowReminderPicker(false);
-                      }
-                    }}
-                    disabled={!newReminderDate}
-                    className="flex-1 px-3 py-1.5 text-xs font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:bg-surface-300 dark:disabled:bg-surface-600 rounded transition-colors"
+                    onClick={() => handleStartEditReminder(reminder)}
+                    className="p-1 text-surface-400 hover:text-primary-500 dark:hover:text-primary-400 opacity-0 group-hover:opacity-100 transition-all"
+                    title="Edit reminder"
                   >
-                    Add Reminder
+                    <Pencil className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => {
-                      setNewReminderDate(undefined);
-                      setShowReminderPicker(false);
-                    }}
-                    className="px-3 py-1.5 text-xs font-medium text-surface-600 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-700 rounded transition-colors"
+                    onClick={() => handleRemoveReminder(reminder.id)}
+                    className="p-1 text-surface-400 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                    title="Remove reminder"
                   >
-                    Cancel
+                    <X className="w-4 h-4" />
                   </button>
                 </div>
               </div>
-            ) : (
-              <button
-                onClick={() => setShowReminderPicker(true)}
-                className="inline-flex items-center gap-1 px-2 py-1 text-xs text-surface-500 dark:text-surface-400 border border-dashed border-surface-300 dark:border-surface-600 rounded-full hover:border-surface-400 dark:hover:border-surface-500 transition-colors"
-              >
-                <Plus className="w-3 h-3" />
-                Add reminder
-              </button>
-            )}
+            ))}
+            
+            <button
+              onClick={() => setShowReminderPicker(true)}
+              className="inline-flex items-center gap-1 px-2 py-1 text-xs text-surface-500 dark:text-surface-400 border border-dashed border-surface-300 dark:border-surface-600 rounded-full hover:border-surface-400 dark:hover:border-surface-500 transition-colors"
+            >
+              <Plus className="w-3 h-3" />
+              Add reminder
+            </button>
           </div>
         </div>
 
@@ -602,6 +514,69 @@ export function TaskEditor({ task }: TaskEditorProps) {
         <div>Created: {format(new Date(task.createdAt), 'PPp')}</div>
         <div>Modified: {format(new Date(task.modifiedAt), 'PPp')}</div>
       </div>
+
+      {/* Start Date Picker Modal */}
+      {showStartDatePicker && (
+        <DatePickerModal
+          isOpen={showStartDatePicker}
+          onClose={() => setShowStartDatePicker(false)}
+          value={task.startDate ? new Date(task.startDate) : undefined}
+          onChange={handleStartDateChange}
+          title="Start Date"
+          allDay={task.startDateAllDay}
+          onAllDayChange={handleStartDateAllDayChange}
+        />
+      )}
+
+      {/* Due Date Picker Modal */}
+      {showDueDatePicker && (
+        <DatePickerModal
+          isOpen={showDueDatePicker}
+          onClose={() => setShowDueDatePicker(false)}
+          value={task.dueDate ? new Date(task.dueDate) : undefined}
+          onChange={handleDueDateChange}
+          title="Due Date"
+          allDay={task.dueDateAllDay}
+          onAllDayChange={handleDueDateAllDayChange}
+        />
+      )}
+
+      {/* Tag Picker Modal */}
+      {showTagPicker && (
+        <TagPickerModal
+          isOpen={showTagPicker}
+          onClose={() => setShowTagPicker(false)}
+          availableTags={availableTags}
+          onSelectTag={(tagId) => addTagToTaskMutation.mutate({ taskId: task.id, tagId })}
+          allTagsAssigned={availableTags.length === 0 && tags.length > 0}
+          noTagsExist={tags.length === 0}
+        />
+      )}
+
+      {/* Add Reminder Modal */}
+      {showReminderPicker && (
+        <ReminderPickerModal
+          isOpen={showReminderPicker}
+          onClose={() => setShowReminderPicker(false)}
+          onSave={handleAddReminder}
+          title="Add Reminder"
+        />
+      )}
+
+      {/* Edit Reminder Modal */}
+      {editingReminderId !== null && (
+        <ReminderPickerModal
+          isOpen={editingReminderId !== null}
+          onClose={handleCancelEditReminder}
+          value={editReminderDate}
+          onSave={(date) => {
+            if (editingReminderId) {
+              handleUpdateReminder(editingReminderId, date);
+            }
+          }}
+          title="Edit Reminder"
+        />
+      )}
     </div>
   );
 }
