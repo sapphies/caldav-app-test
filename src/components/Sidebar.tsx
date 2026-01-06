@@ -199,7 +199,7 @@ export function Sidebar({ onOpenSettings, onOpenImport }: SidebarProps) {
 
             {accounts.length === 0 ? (
               <div className="px-4 py-3 text-sm text-surface-500 dark:text-surface-400">
-                No accounts yet. Add a CalDAV account to get started.
+                No accounts yet. Add one to get started.
               </div>
             ) : (
               accounts.map((account) => (
@@ -218,7 +218,7 @@ export function Sidebar({ onOpenSettings, onOpenImport }: SidebarProps) {
                     <span className="flex-1 text-left truncate text-surface-700 dark:text-surface-300">
                       {account.name}
                     </span>
-                    <Tooltip content="New calendar" position="top">
+                    <Tooltip content="Add a new calendar" position="top">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -304,7 +304,7 @@ export function Sidebar({ onOpenSettings, onOpenImport }: SidebarProps) {
               <span className="text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">
                 Tags
               </span>
-              <Tooltip content="Add tag" position="top">
+              <Tooltip content="Add a new tag" position="top">
                 <button
                   onClick={() => {
                     setEditingTagId(null);
