@@ -613,6 +613,7 @@ interface FlattenedTask {
   depth: number;
   parentUid?: string;
   ancestorIds: string[];
+  sortOrder: number;
 }
 
 export function reorderTasks(
@@ -634,6 +635,7 @@ export function reorderTasks(
   if (activeIndex === -1 || overIndex === -1) return;
 
   const overItem = flattenedItems[overIndex];
+  const activeItem = flattenedItems[activeIndex];
   
   // Prevent dropping into own descendants
   if (overItem.ancestorIds.includes(activeId)) {
@@ -678,17 +680,60 @@ export function reorderTasks(
     }
   }
 
-  // Get all current siblings at the target parent level (excluding the task being moved)
-  const siblings = tasks.filter(t => t.parentUid === newParentUid && t.id !== activeId);
+  // Get all items at the target parent level (excluding the task being moved and its descendants)
+  const activeDescendantIds = new Set<string>();
+  const collectDescendants = (taskId: string) => {
+    for (const item of flattenedItems) {
+      if (item.ancestorIds.includes(taskId)) {
+        activeDescendantIds.add(item.id);
+      }
+    }
+  };
+  collectDescendants(activeId);
+  
+  // Get siblings at the target parent level, excluding active and its descendants
+  const siblings = tasks.filter(t => 
+    t.parentUid === newParentUid && 
+    t.id !== activeId && 
+    !activeDescendantIds.has(t.id)
+  );
   const sortedSiblings = getSortedTasks(siblings, data.ui.sortConfig);
   
-  // Determine where to insert among siblings
+  // Determine where to insert among siblings based on visual position
   let insertIndex = 0;
   
-  if (activeTask.parentUid !== newParentUid || activeId === overId) {
+  // Find the last sibling that appears before the over position in the flattened list
+  for (let i = overIndex; i >= 0; i--) {
+    const item = flattenedItems[i];
+    if (item.id === activeId || activeDescendantIds.has(item.id)) continue;
+    
+    if (item.parentUid === newParentUid) {
+      // Found a sibling at the target level
+      const siblingIndex = sortedSiblings.findIndex(s => s.id === item.id);
+      if (siblingIndex !== -1) {
+        // If moving down, insert after this sibling; if moving up or same position, insert at this position
+        if (activeIndex < overIndex) {
+          insertIndex = siblingIndex + 1;
+        } else {
+          insertIndex = siblingIndex;
+        }
+        break;
+      }
+    } else if (item.uid === newParentUid) {
+      // We've reached the parent itself, insert at the beginning
+      insertIndex = 0;
+      break;
+    }
+  }
+
+  // If activeId === overId but indent changed, need to recalculate position
+  if (activeId === overId && activeItem.parentUid !== newParentUid) {
+    // Moving to a new parent at the same visual position
+    // Find where in the new parent's children we should insert
+    insertIndex = 0;
     for (let i = overIndex - 1; i >= 0; i--) {
       const item = flattenedItems[i];
-      if (item.id === activeId) continue;
+      if (item.id === activeId || activeDescendantIds.has(item.id)) continue;
       
       if (item.parentUid === newParentUid) {
         const siblingIndex = sortedSiblings.findIndex(s => s.id === item.id);
@@ -696,17 +741,10 @@ export function reorderTasks(
           insertIndex = siblingIndex + 1;
           break;
         }
-      }
-      
-      if (item.uid === newParentUid) {
+      } else if (item.uid === newParentUid) {
         insertIndex = 0;
         break;
       }
-    }
-  } else {
-    const overSiblingIndex = sortedSiblings.findIndex(s => s.id === overId);
-    if (overSiblingIndex !== -1) {
-      insertIndex = activeIndex < overIndex ? overSiblingIndex + 1 : overSiblingIndex;
     }
   }
 
@@ -936,6 +974,48 @@ export function addCalendar(accountId: string, calendarData: Partial<Calendar>):
     ui: {
       ...data.ui,
       activeCalendarId: data.ui.activeCalendarId || calendar.id,
+    },
+  });
+}
+
+export function deleteCalendar(accountId: string, calendarId: string): void {
+  const data = loadDataStore();
+  
+  // Get all tasks to delete and track for server deletion
+  const tasksToDelete = data.tasks.filter(t => t.calendarId === calendarId);
+  const newPendingDeletions = [
+    ...data.pendingDeletions,
+    ...tasksToDelete.filter(t => t.href).map(t => ({
+      uid: t.uid,
+      href: t.href!,
+      accountId: t.accountId,
+      calendarId: t.calendarId,
+    })),
+  ];
+  
+  // Get first available calendar from other accounts/calendars for active calendar fallback
+  let newActiveCalendarId = data.ui.activeCalendarId;
+  if (data.ui.activeCalendarId === calendarId) {
+    const otherCalendars = data.accounts
+      .flatMap(acc => acc.calendars)
+      .filter(cal => cal.id !== calendarId);
+    newActiveCalendarId = otherCalendars[0]?.id ?? null;
+  }
+  
+  saveDataStore({
+    ...data,
+    accounts: data.accounts.map(acc =>
+      acc.id === accountId
+        ? { ...acc, calendars: acc.calendars.filter(c => c.id !== calendarId) }
+        : acc
+    ),
+    tasks: data.tasks.filter(t => t.calendarId !== calendarId),
+    pendingDeletions: newPendingDeletions,
+    ui: {
+      ...data.ui,
+      activeCalendarId: newActiveCalendarId,
+      selectedTaskId: tasksToDelete.some(t => t.id === data.ui.selectedTaskId) ? null : data.ui.selectedTaskId,
+      isEditorOpen: tasksToDelete.some(t => t.id === data.ui.selectedTaskId) ? false : data.ui.isEditorOpen,
     },
   });
 }

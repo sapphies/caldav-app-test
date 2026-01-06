@@ -34,6 +34,10 @@ import { setIsKeyboardDragging } from '@/lib/dragState';
 // pixels of horizontal drag per indent level
 const INDENT_SHIFT_SIZE = 28;
 
+// Disable drop animation entirely to prevent visual conflict
+// When we drop, items should instantly appear in their new positions
+const dropAnimation = null;
+
 export function TaskList() {
   const { data: uiState } = useUIState();
   const { data: filteredTasksData = [] } = useFilteredTasks();
@@ -335,7 +339,7 @@ export function TaskList() {
           </div>
         </SortableContext>
 
-        <DragOverlay>
+        <DragOverlay dropAnimation={dropAnimation}>
           {activeTask ? (
             <div 
               className="drag-overlay relative"

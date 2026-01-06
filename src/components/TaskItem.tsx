@@ -1,4 +1,5 @@
-import { useSortable } from '@dnd-kit/sortable';
+import { useSortable, defaultAnimateLayoutChanges } from '@dnd-kit/sortable';
+import type { AnimateLayoutChanges } from '@dnd-kit/sortable';
 import Calendar from 'lucide-react/icons/calendar';
 import Clock from 'lucide-react/icons/clock';
 import Check from 'lucide-react/icons/check';
@@ -66,24 +67,41 @@ export function TaskItem({ task, depth, ancestorIds, isDragEnabled, isOverlay }:
   // helper to get tag by id
   const getTagById = (tagId: string) => taskData.getTags().find(t => t.id === tagId);
 
+  // Custom animateLayoutChanges: disable animation when the drag ends (wasDragging transitions to false)
+  // This prevents the "items crossing each other" animation glitch
+  const animateLayoutChanges: AnimateLayoutChanges = (args) => {
+    const { isSorting, wasDragging } = args;
+    // Disable animation when sorting ends (wasDragging means this item was being dragged)
+    // or when any sorting operation ends (isSorting becoming false)
+    if (wasDragging || !isSorting) {
+      return false;
+    }
+    return defaultAnimateLayoutChanges(args);
+  };
+
   // pass ancestorIds as data so it can be accessed in handleDragEnd
   const {
     attributes,
     listeners,
     setNodeRef,
     transform,
-    transition,
     isDragging,
   } = useSortable({
     id: task.id,
     disabled: !isDragEnabled,
     data: { ancestorIds },
+    animateLayoutChanges,
   });
 
-  // only use translate, not scale, to avoid layout shifts
-  const style = {
+  // Disable all transitions - items will snap to positions immediately.
+  // This prevents the "jumping" animation when drag ends and displaced items
+  // return to their natural positions.
+  // Use opacity: 0 instead of visibility: hidden for instant hiding without flash.
+  const style: React.CSSProperties = {
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
-    transition,
+    transition: 'none',
+    opacity: isDragging ? 0 : undefined,
+    pointerEvents: isDragging ? 'none' : undefined,
   };
 
   const isSelected = selectedTaskId === task.id;
@@ -147,7 +165,6 @@ export function TaskItem({ task, depth, ancestorIds, isDragEnabled, isOverlay }:
         data-context-menu
         className={`
           group relative flex items-start gap-3 pr-3 py-3 bg-white dark:bg-surface-800 rounded-lg border transition-all
-          ${isDragging ? 'opacity-50' : ''}
           ${isOverlay ? 'shadow-xl' : 'shadow-sm hover:shadow-md'}
           ${isSelected ? 'ring-2 ring-primary-100 dark:ring-primary-900/50' : task.priority === 'none' ? 'border-surface-200 dark:border-surface-700' : ''}
           ${task.completed ? 'opacity-60' : ''}
