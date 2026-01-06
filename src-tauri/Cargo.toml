@@ -1,6 +1,6 @@
 [package]
 name = "caldav-tasks"
-version = "0.2.1"
+version = "0.2.2"
 description = "a cross-platform CalDAV task management app"
 authors = ["you"]
 license = ""
@@ -17,6 +17,7 @@ tauri-plugin-http = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-notification = "2"
+tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
