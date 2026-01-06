@@ -1,9 +1,4 @@
-export function isMacPlatform(): boolean {
-  if (typeof navigator === 'undefined') {
-    return false;
-  }
-  return /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
-}
+import { isMacPlatform } from "./misc";
 
 export function getMetaKeyLabel(): string {
   return isMacPlatform() ? '⌘' : 'Ctrl';

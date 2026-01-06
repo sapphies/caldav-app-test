@@ -26,6 +26,7 @@ import { useModalEscapeKey } from '@/hooks/useModalEscapeKey';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { downloadFile } from '../../utils/file';
 import { getMetaKeyLabel, getAltKeyLabel, getShiftKeyLabel } from '../../utils/keyboard';
+import { isMacPlatform } from '../../utils/misc';
 import { KeyboardShortcutModal } from './KeyboardShortcutModal';
 import type { Account, Priority } from '@/types';
 import packageJson from '../../../package.json';
@@ -505,11 +506,13 @@ function NotificationSettings() {
           </div>
         </div>
 
-        <div className="p-3 bg-surface-200 dark:bg-surface-700 rounded-lg">
+        {isMacPlatform() && (
+          <div className="p-3 bg-surface-200 dark:bg-surface-700 rounded-lg">
           <p className="text-sm text-surface-600 dark:text-surface-400">
             On macOS, you might need to allow notifications for this app when prompted.
           </p>
         </div>
+        )}
       </div>
     </div>
   );
