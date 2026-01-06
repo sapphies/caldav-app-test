@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import X from 'lucide-react/icons/x';
 import Loader2 from 'lucide-react/icons/loader-2';
 import { useCreateAccount, useUpdateAccount, useAddCalendar } from '@/hooks/queries';
@@ -23,9 +23,19 @@ export function AccountModal({ account, onClose }: AccountModalProps) {
   const [serverType, setServerType] = useState<ServerType>(account?.serverType ?? 'generic');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   // handle ESC key to close modal
   useModalEscapeKey(onClose);
+
+  // Autofocus name input after modal is mounted and visible
+  useEffect(() => {
+    // Delay to ensure modal animation (150ms) has completed
+    const timer = setTimeout(() => {
+      nameInputRef.current?.focus();
+    }, 200);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,6 +127,7 @@ export function AccountModal({ account, onClose }: AccountModalProps) {
               Account Name
             </label>
             <input
+              ref={nameInputRef}
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}

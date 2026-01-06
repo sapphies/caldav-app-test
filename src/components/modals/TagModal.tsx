@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import X from 'lucide-react/icons/x';
 import { useTags, useCreateTag, useUpdateTag } from '@/hooks/queries';
 import { useModalEscapeKey } from '@/hooks/useModalEscapeKey';
@@ -23,9 +23,19 @@ export function TagModal({ tagId, onClose }: TagModalProps) {
   const [name, setName] = useState(existingTag?.name || '');
   const [color, setColor] = useState(existingTag?.color || DEFAULT_COLOR);
   const [icon, setIcon] = useState(existingTag?.icon || 'star');
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   // handle ESC key to close modal
   useModalEscapeKey(onClose);
+
+  // Autofocus name input after modal is mounted and visible
+  useEffect(() => {
+    // Delay to ensure modal animation (150ms) has completed
+    const timer = setTimeout(() => {
+      nameInputRef.current?.focus();
+    }, 200);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,13 +75,13 @@ export function TagModal({ tagId, onClose }: TagModalProps) {
               Name
             </label>
             <input
+              ref={nameInputRef}
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Tag name"
               required
-              autoFocus
-              className="w-full px-3 py-2 text-sm text-surface-800 dark:text-surface-200 bg-white dark:bg-surface-700 border border-surface-200 dark:border-surface-600 rounded-lg focus:outline-none focus:border-primary-300 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/50"
+              className="flex-1 px-3 py-2 text-sm text-surface-800 dark:text-surface-200 bg-white dark:bg-surface-700 border border-surface-200 dark:border-surface-600 rounded-lg focus:outline-none focus:border-primary-300 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/50"
             />
           </div>
 

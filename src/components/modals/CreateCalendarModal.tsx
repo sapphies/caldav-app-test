@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import X from 'lucide-react/icons/x';
 import Loader2 from 'lucide-react/icons/loader-2';
 import { useAddCalendar } from '@/hooks/queries';
@@ -22,9 +22,19 @@ export function CreateCalendarModal({ accountId, onClose }: CreateCalendarModalP
   const [icon, setIcon] = useState('calendar');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   // handle ESC key to close modal
   useModalEscapeKey(onClose);
+
+  // Autofocus name input after modal is mounted and visible
+  useEffect(() => {
+    // Delay to ensure modal animation (150ms) has completed
+    const timer = setTimeout(() => {
+      nameInputRef.current?.focus();
+    }, 200);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,12 +82,12 @@ export function CreateCalendarModal({ accountId, onClose }: CreateCalendarModalP
             <div className="flex items-center gap-2">
               <IconPicker value={icon} onChange={setIcon} color={color} />
               <input
+                ref={nameInputRef}
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="My Tasks"
                 required
-                autoFocus
                 className="flex-1 px-3 py-2 text-sm text-surface-800 dark:text-surface-200 bg-white dark:bg-surface-700 border border-surface-200 dark:border-surface-600 rounded-lg focus:outline-none focus:border-primary-300 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/50"
               />
             </div>
