@@ -17,6 +17,9 @@ import { downloadFile } from '../../utils/file';
 import { pluralize } from '../../utils/format';
 import { Task, Calendar } from '@/types';
 import { useModalEscapeKey } from '@/hooks/useModalEscapeKey';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('Export', '#f59e0b');
 
 type ExportFormat = 'ics' | 'json' | 'markdown' | 'csv';
 type ExportType = 'tasks' | 'all-calendars' | 'single-calendar';
@@ -128,7 +131,7 @@ export function ExportModal({ tasks, fileName = 'export', type = 'tasks', calend
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       setError('Failed to copy to clipboard');
-      console.error(err);
+      log.error('Failed to copy to clipboard:', err);
     }
   };
 
@@ -172,7 +175,7 @@ export function ExportModal({ tasks, fileName = 'export', type = 'tasks', calend
       }
     } catch (err) {
       setError(`Failed to export: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      console.error(err);
+      log.error('Failed to export:', err);
     } finally {
       setExporting(false);
     }

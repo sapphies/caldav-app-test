@@ -9,6 +9,9 @@ import { parseIcsFile, parseJsonTasksFile } from '../../utils/ical';
 import { pluralize } from '../../utils/format';
 import type { Task, Calendar } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('Import', '#84cc16');
 
 interface ImportModalProps {
   isOpen: boolean;
@@ -124,7 +127,7 @@ export function ImportModal({ isOpen, onClose, preloadedFile }: ImportModalProps
       handleFileContent(file.name, content);
     } catch (err) {
       setError('Failed to read file.');
-      console.error(err);
+      log.error('Failed to read file:', err);
     }
   };
 
@@ -190,7 +193,7 @@ export function ImportModal({ isOpen, onClose, preloadedFile }: ImportModalProps
       }, 1500);
     } catch (err) {
       setError('Failed to import tasks.');
-      console.error(err);
+      log.error('Failed to import tasks:', err);
     } finally {
       setImporting(false);
     }
@@ -208,7 +211,7 @@ export function ImportModal({ isOpen, onClose, preloadedFile }: ImportModalProps
       handleFileContent(file.name, content);
     } catch (err) {
       setError('Failed to read file.');
-      console.error(err);
+      log.error('Failed to read dropped file:', err);
     }
   };
 

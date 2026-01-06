@@ -5,6 +5,9 @@ import { useCreateAccount, useUpdateAccount, useAddCalendar } from '@/hooks/quer
 import { useModalEscapeKey } from '@/hooks/useModalEscapeKey';
 import { Account, ServerType } from '@/types';
 import { caldavService } from '@/lib/caldav';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('Account', '#f97316');
 
 interface AccountModalProps {
   account: Account | null;
@@ -49,7 +52,7 @@ export function AccountModal({ account, onClose }: AccountModalProps) {
         // update existing account
         if (effectivePassword) {
           // test connection with new credentials before saving
-          console.log(`[Account] Testing connection to ${serverUrl}...`);
+          log.debug(`Testing connection to ${serverUrl}...`);
           await caldavService.connect(account.id, serverUrl, username, effectivePassword, serverType);
         }
         
@@ -69,12 +72,12 @@ export function AccountModal({ account, onClose }: AccountModalProps) {
         // create a temporary ID to test the connection
         const tempId = crypto.randomUUID();
         
-        console.log(`[Account] Connecting to ${serverUrl}...`);
+        log.debug(`Connecting to ${serverUrl}...`);
         await caldavService.connect(tempId, serverUrl, username, effectivePassword, serverType);
 
-        console.log(`[Account] Fetching calendars...`);
+        log.debug(`Fetching calendars...`);
         const calendars = await caldavService.fetchCalendars(tempId);
-        console.log(`[Account] Found ${calendars.length} calendars:`, calendars);
+        log.info(`Found ${calendars.length} calendars:`, calendars);
         
         // connection successful - now add the account with the same ID we used for connection
         createAccountMutation.mutate({ 
@@ -97,7 +100,7 @@ export function AccountModal({ account, onClose }: AccountModalProps) {
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to connect to CalDAV server');
-      console.error(err);
+      log.error('Failed to connect:', err);
     } finally {
       setIsLoading(false);
     }

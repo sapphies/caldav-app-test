@@ -2,6 +2,9 @@ import { useEffect, useRef } from 'react';
 import { useTasks } from '@/hooks/queries';
 import { useSettingsStore } from '@/store/settingsStore';
 import { isPast, differenceInSeconds } from 'date-fns';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('Notifications', '#f43f5e');
 
 // check if we're in a Tauri environment
 const isTauri = typeof window !== 'undefined' && '__TAURI__' in window;
@@ -33,7 +36,7 @@ async function showNotification(options: NotificationOptions): Promise<void> {
         });
       }
     } catch (error) {
-      console.error('Failed to show notification:', error);
+      log.error('Failed to show notification:', error);
     }
   } else {
     // browser fallback using Web Notifications API

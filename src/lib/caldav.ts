@@ -1,6 +1,9 @@
 import { propfind, report, put, del, proppatch, mkcalendar, parseMultiStatus, type CalDAVCredentials } from './tauri-http';
 import { Account, Calendar, Task } from '@/types';
 import { taskToVTodo, vtodoToTask } from '../utils/ical';
+import { createLogger } from './logger';
+
+const log = createLogger('CalDAV', '#3b82f6');
 
 interface AccountConnection {
   serverUrl: string;
@@ -52,11 +55,9 @@ class CalDAVService {
         break;
       case 'generic': {
         // for generic servers, perform proper CalDAV discovery per RFC 4791
-        console.log('[CalDAV] Starting generic CalDAV discovery...');
         
         // step 1: discover DAV root from .well-known
         const wellKnownUrl = `${baseUrl}/.well-known/caldav`;
-        console.log('[CalDAV] Querying well-known URL:', wellKnownUrl);
         
         const wellKnownResponse = await propfind(wellKnownUrl, credentials, `<?xml version="1.0" encoding="utf-8"?>
 <d:propfind xmlns:d="DAV:">
@@ -80,7 +81,6 @@ class CalDAVService {
             const davRoot = results[0].href.startsWith('http') 
               ? results[0].href 
               : new URL(results[0].href, baseUrl).toString();
-            console.log('[CalDAV] Trying DAV root for principal discovery:', davRoot);
             discoveredPrincipal = await this.discoverPrincipal(davRoot, credentials);
           }
         }
@@ -94,8 +94,6 @@ class CalDAVService {
           ? discoveredPrincipal 
           : new URL(discoveredPrincipal, baseUrl).toString();
         
-        console.log('[CalDAV] Discovered principal URL:', principalUrl);
-        
         // step 3: discover calendar-home-set from principal
         const discoveredCalendarHome = await this.discoverCalendarHome(principalUrl, credentials);
         
@@ -108,7 +106,6 @@ class CalDAVService {
           ? discoveredCalendarHome 
           : new URL(discoveredCalendarHome, baseUrl).toString();
         
-        console.log('[CalDAV] Discovered calendar-home-set:', calendarHome);
         break;
       }
       default:
@@ -176,10 +173,7 @@ class CalDAVService {
       throw new Error(`Failed to fetch calendars: HTTP ${response.status}`);
     }
     
-    console.log('[CalDAV] fetchCalendars raw response:', response.body.substring(0, 2000));
-    
     const results = parseMultiStatus(response.body);
-    console.log('[CalDAV] Parsed results:', results);
     
     const calendars: Calendar[] = [];
     
@@ -187,7 +181,6 @@ class CalDAVService {
     const calendarHomePath = new URL(conn.calendarHome, conn.serverUrl).pathname;
     
     for (const result of results) {
-      console.log('[CalDAV] Checking result:', result.href, 'resourcetype:', result.props['resourcetype']);
       
       // skip the calendar home itself (exact match only)
       const resultPath = result.href.startsWith('http') 
@@ -195,14 +188,12 @@ class CalDAVService {
         : result.href;
       
       if (resultPath === calendarHomePath || resultPath === calendarHomePath.replace(/\/$/, '')) {
-        console.log('[CalDAV] Skipping calendar home URL');
         continue;
       }
       
       // check if it's a calendar (must have 'calendar' in resourcetype)
       const resourceType = result.props['resourcetype'] || '';
       if (!resourceType.includes('calendar')) {
-        console.log('[CalDAV] Skipping non-calendar resource');
         continue;
       }
       
@@ -216,7 +207,6 @@ class CalDAVService {
       
       // only include calendars that support VTODO (for task management)
       if (supportedComponents.length > 0 && !supportedComponents.includes('VTODO')) {
-        console.log(`[CalDAV] Skipping calendar that doesn't support VTODO: ${result.props['displayname']} (supports: ${supportedComponents.join(', ')})`);
         continue;
       }
       
@@ -245,7 +235,6 @@ class CalDAVService {
    * fetch tasks from a calendar
    */
   async fetchTasks(accountId: string, calendar: Calendar): Promise<Task[]> {
-    console.log(`[CalDAV] fetchTasks called for calendar: ${calendar.displayName} (${calendar.url})`);
     const conn = this.connections.get(accountId);
     if (!conn) throw new Error('Account not connected');
 
@@ -263,19 +252,15 @@ class CalDAVService {
   </c:filter>
 </c:calendar-query>`;
 
-    console.log(`[CalDAV] Sending REPORT to: ${calendar.url}`);
     const response = await report(calendar.url, conn.credentials, reportBody, '1');
-    console.log(`[CalDAV] REPORT response status: ${response.status}`);
-    console.log(`[CalDAV] REPORT response body:`, response.body);
     
     if (response.status !== 207) {
-      console.error(`[CalDAV] Failed to fetch tasks: HTTP ${response.status}`);
-      console.error(`[CalDAV] Response body:`, response.body);
+      log.error(`Failed to fetch tasks: HTTP ${response.status}`);
+      log.error(`Response body:`, response.body);
       return [];
     }
     
     const results = parseMultiStatus(response.body);
-    console.log(`[CalDAV] Parsed ${results.length} results from REPORT`);
     const tasks: Task[] = [];
     
     for (const result of results) {
@@ -319,10 +304,10 @@ class CalDAVService {
         return { href: url, etag };
       }
       
-      console.error(`Failed to create task: HTTP ${response.status}`);
+      log.error(`Failed to create task: HTTP ${response.status}`);
       return null;
     } catch (error) {
-      console.error('Error creating task:', error);
+      log.error('Error creating task:', error);
       return null;
     }
   }
@@ -332,7 +317,7 @@ class CalDAVService {
     if (!conn) throw new Error('Account not connected');
 
     if (!task.href) {
-      console.error('Task has no href for update');
+      log.error('Task has no href for update');
       return null;
     }
 
@@ -345,10 +330,10 @@ class CalDAVService {
         return { etag };
       }
       
-      console.error(`Failed to update task: HTTP ${response.status}`);
+      log.error(`Failed to update task: HTTP ${response.status}`);
       return null;
     } catch (error) {
-      console.error('Error updating task:', error);
+      log.error('Error updating task:', error);
       return null;
     }
   }
@@ -359,7 +344,7 @@ class CalDAVService {
     if (!conn) throw new Error('Account not connected');
 
     if (!task.href) {
-      console.error('Task has no href for deletion');
+      log.error('Task has no href for deletion');
       return false;
     }
 
@@ -367,7 +352,7 @@ class CalDAVService {
       const response = await del(task.href, conn.credentials, task.etag);
       return response.status === 204 || response.status === 200;
     } catch (error) {
-      console.error('Error deleting task:', error);
+      log.error('Error deleting task:', error);
       return false;
     }
   }
@@ -436,16 +421,10 @@ class CalDAVService {
     </set>
 </propertyupdate>`;
 
-      console.log('[CalDAV] updateCalendar displayname URL:', calendarUrl);
-      console.log('[CalDAV] updateCalendar displayname body:', displaynameBody);
-
       const response = await proppatch(calendarUrl, conn.credentials, displaynameBody);
       
-      console.log('[CalDAV] updateCalendar displayname response status:', response.status);
-      console.log('[CalDAV] updateCalendar displayname response body:', response.body);
-      
       if (response.status !== 207 && response.status !== 200) {
-        console.error(`Failed to update displayname: HTTP ${response.status}`);
+        log.error(`Failed to update displayname: HTTP ${response.status}`);
         failedProperties.push('displayname');
       } else {
         // check if displayname update succeeded in the multistatus response
@@ -472,16 +451,10 @@ class CalDAVService {
     </set>
 </propertyupdate>`;
 
-      console.log('[CalDAV] updateCalendar color URL:', calendarUrl);
-      console.log('[CalDAV] updateCalendar color body:', colorBody);
-
       const response = await proppatch(calendarUrl, conn.credentials, colorBody);
       
-      console.log('[CalDAV] updateCalendar color response status:', response.status);
-      console.log('[CalDAV] updateCalendar color response body:', response.body);
-      
       if (response.status !== 207 && response.status !== 200) {
-        console.error(`Failed to update color: HTTP ${response.status}`);
+        log.error(`Failed to update color: HTTP ${response.status}`);
         failedProperties.push('calendar-color');
       } else {
         // check if color update succeeded in the multistatus response
@@ -527,7 +500,7 @@ class CalDAVService {
         return match[1];
       }
     } catch (error) {
-      console.error('[CalDAV] Error discovering principal:', error);
+      log.error('Error discovering principal:', error);
     }
 
     return null;
@@ -560,7 +533,7 @@ class CalDAVService {
         return match[1];
       }
     } catch (error) {
-      console.error('[CalDAV] Error discovering calendar home:', error);
+      log.error('Error discovering calendar home:', error);
     }
 
     return null;
@@ -599,13 +572,13 @@ class CalDAVService {
       const response = await del(calendarUrl, conn.credentials);
       
       if (response.status !== 204 && response.status !== 200) {
-        console.error(`Failed to delete calendar: HTTP ${response.status}`);
+        log.error(`Failed to delete calendar: HTTP ${response.status}`);
         throw new Error(`Failed to delete calendar: HTTP ${response.status}`);
       }
 
       return true;
     } catch (error) {
-      console.error('Error deleting calendar:', error);
+      log.error('Error deleting calendar:', error);
       throw error;
     }
   }
@@ -630,8 +603,6 @@ class CalDAVService {
     // create the calendar URL under the calendar home
     const calendarUrl = `${conn.calendarHome}${slug}/`;
     
-    console.log(`[CalDAV] Creating calendar at ${calendarUrl}`);
-
     // build the MKCALENDAR request body
     let colorProp = '';
     if (color) {
@@ -654,11 +625,11 @@ class CalDAVService {
     const response = await mkcalendar(calendarUrl, conn.credentials, mkcalendarBody);
     
     if (response.status !== 201 && response.status !== 200) {
-      console.error(`Failed to create calendar: HTTP ${response.status}`, response.body);
+      log.error(`Failed to create calendar: HTTP ${response.status}`, response.body);
       throw new Error(`Failed to create calendar: HTTP ${response.status}`);
     }
 
-    console.log(`[CalDAV] Calendar created successfully`);
+    log.info(`Calendar created successfully`);
 
     // return the new calendar object
     return {

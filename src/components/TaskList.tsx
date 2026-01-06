@@ -29,6 +29,9 @@ import ListTodo from 'lucide-react/icons/list-todo';
 import Plus from 'lucide-react/icons/plus';
 import { flattenTasks, FlattenedTask } from '../utils/tree';
 import { getMetaKeyLabel, getModifierJoiner } from '../utils/keyboard';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('TaskList', '#14b8a6');
 import { setIsKeyboardDragging } from '@/lib/dragState';
 
 // pixels of horizontal drag per indent level
@@ -246,7 +249,7 @@ export function TaskList() {
     
     // prevent dropping into own descendants
     if (overAncestorIds.includes(active.id as string)) {
-      console.log('Cannot drop item into its descendant');
+      log.debug('Cannot drop item into its descendant');
       return;
     }
 

@@ -1,4 +1,7 @@
 import { useState, useCallback } from 'react';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('FileDrop', '#eab308');
 
 // Supported file extensions for import
 const SUPPORTED_EXTENSIONS = ['.ics', '.ical', '.json'];
@@ -91,7 +94,7 @@ export function useFileDrop(options: UseFileDropOptions = {}): UseFileDropReturn
           onFileDrop?.({ name: file.name, content });
         }
       } catch (err) {
-        console.error('Failed to read dropped file:', err);
+        log.error('Failed to read dropped file:', err);
       }
     }
   }, [onFileDrop]);

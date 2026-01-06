@@ -1,4 +1,7 @@
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
+import { createLogger } from './logger';
+
+const log = createLogger('HTTP', '#6366f1');
 
 export interface HttpResponse {
   status: number;
@@ -20,7 +23,7 @@ export async function tauriRequest(
   body?: string,
   headers?: Record<string, string>
 ): Promise<HttpResponse> {
-  console.log(`[HTTP] ${method} ${url}`);
+  log.debug(`${method} ${url}`);
   
   // use bearer token if provided, otherwise fall back to Basic auth
   const authHeader = credentials.bearerToken
@@ -39,7 +42,7 @@ export async function tauriRequest(
     body: body,
   });
   
-  console.log(`[HTTP] Response: ${response.status}`);
+  log.debug(`Response: ${response.status}`);
   
   // handle redirects manually for CalDAV
   if (response.status === 301 || response.status === 302 || response.status === 307 || response.status === 308) {

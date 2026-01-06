@@ -6,6 +6,9 @@
 import { Task, Priority, Subtask, Reminder } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import * as taskData from '@/lib/taskData';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('iCal', '#22c55e');
 
 // Apple epoch: January 1, 2001 00:00:00 GMT in milliseconds since Unix epoch
 // Used for X-APPLE-SORT-ORDER which stores seconds since Apple epoch
@@ -630,7 +633,7 @@ export function vtodoToTask(
     
     return task;
   } catch (error) {
-    console.error('Error parsing VTODO:', error);
+    log.error('Error parsing VTODO:', error);
     return null;
   }
 }
@@ -796,7 +799,7 @@ export function parseIcsFile(icsContent: string): Partial<Task>[] {
     
     return tasks;
   } catch (error) {
-    console.error('Error parsing ICS file:', error);
+    log.error('Error parsing ICS file:', error);
     return [];
   }
 }
@@ -819,7 +822,7 @@ export function parseJsonTasksFile(jsonContent: string): Partial<Task>[] {
     
     return [];
   } catch (error) {
-    console.error('Error parsing JSON tasks file:', error);
+    log.error('Error parsing JSON tasks file:', error);
     return [];
   }
 }
