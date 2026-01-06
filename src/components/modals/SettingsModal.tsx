@@ -357,11 +357,11 @@ function TaskDefaultsSettings() {
   } = useSettingsStore();
   const { data: tags = [] } = useTags();
 
-  const priorities: { value: Priority; label: string; color: string }[] = [
-    { value: 'none', label: 'None', color: 'surface' },
-    { value: 'low', label: 'Low', color: 'blue' },
-    { value: 'medium', label: 'Medium', color: 'amber' },
-    { value: 'high', label: 'High', color: 'red' },
+  const priorities: { value: Priority; label: string; color: string; borderColor: string; bgColor: string }[] = [
+    { value: 'high', label: 'High', color: 'text-red-500', borderColor: 'border-red-400', bgColor: 'bg-red-50 dark:bg-red-900/30' },
+    { value: 'medium', label: 'Medium', color: 'text-amber-500', borderColor: 'border-amber-400', bgColor: 'bg-amber-50 dark:bg-amber-900/30' },
+    { value: 'low', label: 'Low', color: 'text-blue-500', borderColor: 'border-blue-400', bgColor: 'bg-blue-50 dark:bg-blue-900/30' },
+    { value: 'none', label: 'None', color: 'text-surface-400', borderColor: 'border-surface-300', bgColor: 'bg-surface-50 dark:bg-surface-700' },
   ];
 
   const handleTagToggle = (tagId: string) => {
