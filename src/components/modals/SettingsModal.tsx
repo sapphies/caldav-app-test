@@ -806,9 +806,9 @@ function ShortcutsSettings() {
 
   return (
     <>
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium text-surface-800 dark:text-surface-200">Keyboard Shortcuts</h3>
+      <div className="space-y-3">
+        <div className="flex flex-row justify-between text-sm text-surface-800 dark:text-surface-200">
+          <h3 className="text-sm font-semibold text-surface-800 dark:text-surface-200">Keyboard Shortcuts</h3>
           <button
             onClick={resetShortcuts}
             className="flex items-center gap-1 px-2 py-1 text-xs text-surface-500 hover:text-surface-700 dark:hover:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700 rounded transition-colors"
@@ -818,16 +818,12 @@ function ShortcutsSettings() {
             Reset to Defaults
           </button>
         </div>
-
-        <p className="text-xs text-surface-500 dark:text-surface-400">
-          Click the edit button to change a shortcut.
-        </p>
         
         <div className="space-y-1 rounded-lg border border-surface-200 dark:border-surface-700 overflow-hidden">
           {keyboardShortcuts.map((shortcut) => (
             <div
               key={shortcut.id}
-              className="flex items-center justify-between py-2 px-3 bg-white dark:bg-surface-800 border-b border-surface-100 dark:border-surface-700 last:border-0"
+              className="flex items-center justify-between py-2.5 px-3 bg-white dark:bg-surface-800 border-b border-surface-100 dark:border-surface-700 last:border-0"
             >
               <span className="text-sm text-surface-600 dark:text-surface-400">{shortcut.description}</span>
               
