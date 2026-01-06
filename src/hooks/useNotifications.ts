@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useTasks } from '@/hooks/queries';
 import { useSettingsStore } from '@/store/settingsStore';
-import { isPast, differenceInMinutes } from 'date-fns';
+import { isPast, differenceInSeconds } from 'date-fns';
 
 // check if we're in a Tauri environment
 const isTauri = typeof window !== 'undefined' && '__TAURI__' in window;
@@ -92,10 +92,11 @@ export function useNotifications() {
             if (notifiedRemindersRef.current.has(reminderKey)) continue;
             
             const reminderDate = new Date(reminder.trigger);
-            const minutesUntilReminder = differenceInMinutes(reminderDate, now);
+            const secondsUntilReminder = differenceInSeconds(reminderDate, now);
             
-            // Fire reminder when it's time (within 1 minute window)
-            if (minutesUntilReminder <= 0 && minutesUntilReminder >= -1) {
+            // Fire reminder when the time has arrived (0 or past, within 60 second window to avoid missing)
+            // Using seconds for precision - fire when secondsUntilReminder is between 0 and -60
+            if (secondsUntilReminder <= 0 && secondsUntilReminder >= -60) {
               showNotification({
                 title: 'Task Reminder',
                 body: task.title,
@@ -105,7 +106,7 @@ export function useNotifications() {
           }
         }
 
-        // check due dates
+        // check due dates - notify when task becomes overdue
         if (!task.dueDate) continue;
 
         const dueDate = new Date(task.dueDate);
@@ -113,9 +114,9 @@ export function useNotifications() {
 
         // skip if we already notified about this task
         if (notifiedTasksRef.current.has(taskKey)) continue;
-        
+
+        // Notify when task is overdue
         if (isPast(dueDate) && !notifiedTasksRef.current.has(taskKey)) {
-          // task is overdue, show notification
           showNotification({
             title: 'Task Overdue',
             body: task.title,
