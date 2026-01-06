@@ -5,7 +5,6 @@ import { useModalEscapeKey } from '@/hooks/useModalEscapeKey';
 import { IconPicker, getIconByName } from '../IconPicker';
 import { COLOR_PRESETS, DEFAULT_COLOR } from '@/utils/constants';
 
-
 interface TagModalProps {
   tagId: string | null;
   onClose: () => void;
@@ -72,28 +71,20 @@ export function TagModal({ tagId, onClose }: TagModalProps) {
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           <div>
             <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
-              Name
+              Tag Name
             </label>
-            <input
-              ref={nameInputRef}
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Tag name"
-              required
-              className="flex-1 px-3 py-2 text-sm text-surface-800 dark:text-surface-200 bg-white dark:bg-surface-700 border border-surface-200 dark:border-surface-600 rounded-lg focus:outline-none focus:border-primary-300 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/50"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
-              Icon
-            </label>
-            <IconPicker
-              value={icon}
-              onChange={setIcon}
-              color={color}
-            />
+            <div className="flex items-center gap-2">
+              <IconPicker value={icon} onChange={setIcon} color={color} />
+              <input
+                ref={nameInputRef}
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Tag name"
+                required
+                className="flex-1 px-3 py-2 text-sm text-surface-800 dark:text-surface-200 bg-white dark:bg-surface-700 border border-surface-200 dark:border-surface-600 rounded-lg focus:outline-none focus:border-primary-300 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/50"
+              />
+            </div>
           </div>
 
           <div>
