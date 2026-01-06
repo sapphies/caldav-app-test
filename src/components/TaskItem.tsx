@@ -1,5 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable';
 import Calendar from 'lucide-react/icons/calendar';
+import Clock from 'lucide-react/icons/clock';
 import Check from 'lucide-react/icons/check';
 import CheckCircle2 from 'lucide-react/icons/check-circle-2';
 import ChevronRight from 'lucide-react/icons/chevron-right';
@@ -169,8 +170,23 @@ export function TaskItem({ task, depth, ancestorIds, isDragEnabled, isOverlay }:
         </div>
 
         <div className="flex-1 min-w-0">
-          <div className={`text-sm font-medium leading-5 ${task.completed ? 'line-through text-surface-400' : 'text-surface-800 dark:text-surface-200'}`}>
-            {task.title || <span className="text-surface-400 italic">Untitled task</span>}
+          <div className="flex items-start justify-between gap-2">
+            <div className={`text-sm font-medium leading-5 truncate flex-1 min-w-0 ${task.completed ? 'line-through text-surface-400' : 'text-surface-800 dark:text-surface-200'}`}>
+              {task.title || <span className="text-surface-400 italic">Untitled task</span>}
+            </div>
+
+            {dueDateDisplay && (
+              <span 
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium flex-shrink-0"
+                style={{ 
+                  backgroundColor: dueDateDisplay.bgColor,
+                  color: dueDateDisplay.textColor
+                }}
+              >
+                <Clock className="w-3 h-3" />
+                {dueDateDisplay.text}
+              </span>
+            )}
           </div>
 
           {task.description && (
@@ -210,13 +226,6 @@ export function TaskItem({ task, depth, ancestorIds, isDragEnabled, isOverlay }:
                 >
                   <Calendar className="w-3 h-3" />
                   {calendar?.displayName || 'Calendar'}
-                </span>
-              )}
-
-              {dueDateDisplay && (
-                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs ${dueDateDisplay.className}`}>
-                  <Calendar className="w-3 h-3" />
-                  {dueDateDisplay.text}
                 </span>
               )}
 
