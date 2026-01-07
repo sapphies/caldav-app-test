@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import ChevronDown from 'lucide-react/icons/chevron-down';
 import ChevronRight from 'lucide-react/icons/chevron-right';
 import Plus from 'lucide-react/icons/plus';
@@ -12,6 +12,8 @@ import Inbox from 'lucide-react/icons/inbox';
 import MoreVertical from 'lucide-react/icons/more-vertical';
 import Share2 from 'lucide-react/icons/share-2';
 import Upload from 'lucide-react/icons/upload';
+import PanelLeftClose from 'lucide-react/icons/panel-left-close';
+import PanelLeftOpen from 'lucide-react/icons/panel-left-open';
 import { 
   useAccounts,
   useTags,
@@ -26,6 +28,9 @@ import {
 } from '@/hooks/queries';
 import * as taskData from '@/lib/taskData';
 import { useGlobalContextMenuClose } from '@/hooks/useGlobalContextMenu';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('Sidebar', '#ec4899');
 import { useModalState } from '@/context/modalStateContext';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useSettingsStore } from '@/store/settingsStore';
@@ -45,9 +50,16 @@ import { getMetaKeyLabel, getModifierJoiner } from '../utils/keyboard';
 interface SidebarProps {
   onOpenSettings?: () => void;
   onOpenImport?: () => void;
+  isCollapsed: boolean;
+  width: number;
+  onToggleCollapse: () => void;
+  onWidthChange: (width: number) => void;
 }
 
-export function Sidebar({ onOpenSettings, onOpenImport }: SidebarProps) {
+const MIN_SIDEBAR_WIDTH = 200;
+const MAX_SIDEBAR_WIDTH = 400;
+
+export function Sidebar({ onOpenSettings, onOpenImport, isCollapsed, width, onToggleCollapse, onWidthChange }: SidebarProps) {
   const { data: accounts = [] } = useAccounts();
   const { data: tags = [] } = useTags();
   const { data: uiState } = useUIState();
@@ -95,6 +107,42 @@ export function Sidebar({ onOpenSettings, onOpenImport }: SidebarProps) {
   const modifierJoiner = getModifierJoiner();
   const settingsShortcut = `${metaKey}${modifierJoiner},`;
 
+  // Resizing logic
+  const [isResizing, setIsResizing] = useState(false);
+  const resizeHandleRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      
+      const newWidth = Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, e.clientX));
+      onWidthChange(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, onWidthChange]);
+
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
+
   const toggleAccount = (id: string) => {
     const next = new Set(expandedAccounts);
     if (next.has(id)) {
@@ -140,17 +188,48 @@ export function Sidebar({ onOpenSettings, onOpenImport }: SidebarProps) {
   return (
     <>
       <div 
-        className="w-64 bg-surface-100 dark:bg-surface-900 border-r border-surface-200 dark:border-surface-700 flex flex-col h-full"
+        className={`bg-surface-100 dark:bg-surface-900 border-r border-surface-200 dark:border-surface-700 flex flex-col h-full relative ${!isResizing ? 'transition-[width] duration-200 ease-in-out' : ''}`}
+        style={{ width: isCollapsed ? 48 : width }}
         onClick={handleCloseContextMenu}
       >
-        <div className="h-[53px] px-4 flex items-center border-b border-surface-200 dark:border-surface-700">
-          <h1 className="text-lg font-semibold text-surface-900 dark:text-surface-100 flex items-center gap-2">
-            <FolderKanban className="w-5 h-5 text-primary-600 dark:text-primary-400" />
-            caldav-tasks
-          </h1>
+        {/* Resize handle */}
+        {!isCollapsed && (
+          <div
+            ref={resizeHandleRef}
+            onMouseDown={handleResizeStart}
+            className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary-400 dark:hover:bg-primary-600 transition-colors z-10"
+          />
+        )}
+
+        <div className="h-[53px] px-2 flex items-center justify-center border-b border-surface-200 dark:border-surface-700 shrink-0">
+          {isCollapsed ? (
+            <button
+              onClick={onToggleCollapse}
+              className="p-2 text-surface-500 dark:text-surface-400 hover:text-surface-700 dark:hover:text-surface-200 hover:bg-surface-200 dark:hover:bg-surface-700 rounded-lg transition-colors"
+              title="Expand sidebar"
+            >
+              <PanelLeftOpen className="w-5 h-5" />
+            </button>
+          ) : (
+            <div className="flex items-center flex-1 px-2">
+              <h1 className="text-lg font-semibold text-surface-900 dark:text-surface-100 flex items-center gap-2 flex-1 min-w-0">
+                <FolderKanban className="w-5 h-5 text-primary-600 dark:text-primary-400 shrink-0" />
+                <span className="truncate">caldav-tasks</span>
+              </h1>
+              <button
+                onClick={onToggleCollapse}
+                className="p-1.5 text-surface-500 dark:text-surface-400 hover:text-surface-700 dark:hover:text-surface-200 hover:bg-surface-200 dark:hover:bg-surface-700 rounded-lg transition-colors shrink-0"
+                title="Collapse sidebar"
+              >
+                <PanelLeftClose className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
 
-        <div className="flex-1 overflow-y-auto overscroll-contain">
+        {!isCollapsed && (
+          <>
+            <div className="flex-1 overflow-y-auto overscroll-contain">
           <button
             onClick={() => {
               setAllTasksViewMutation.mutate();
@@ -331,15 +410,16 @@ export function Sidebar({ onOpenSettings, onOpenImport }: SidebarProps) {
                     data-context-menu
                     onClick={() => setActiveTagMutation.mutate(tag.id)}
                     onContextMenu={(e) => handleContextMenu(e, 'tag', tag.id)}
-                    className={`w-full flex items-center gap-2 px-4 py-1.5 text-sm transition-colors ${
+                    className={`w-full flex items-center gap-2 px-4 py-2 text-sm transition-colors ${
                       isActive
                         ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
                         : `text-surface-600 dark:text-surface-400 ${!isAnyModalOpen ? 'hover:bg-surface-200 dark:hover:bg-surface-700' : ''}`
                     }`}
+                    style={isActive ? { backgroundColor: tag.color, color: getContrastTextColor(tag.color) } : undefined}
                   >
                     <TagIcon
                       className="w-3.5 h-3.5"
-                      style={{ color: tag.color }}
+                      style={{ color: isActive ? getContrastTextColor(tag.color) : tag.color }}
                     />
                     <span className="flex-1 text-left truncate">{tag.name}</span>
                     <span className="text-xs text-surface-400">
@@ -352,7 +432,7 @@ export function Sidebar({ onOpenSettings, onOpenImport }: SidebarProps) {
           </div>
         </div>
 
-        <div className="border-t border-surface-200 dark:border-surface-700 p-2">
+        <div className="border-t border-surface-200 dark:border-surface-700 p-2 shrink-0">
           <button 
             onClick={() => onOpenSettings?.()}
             className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-surface-600 dark:text-surface-400 ${!isAnyModalOpen ? 'hover:bg-surface-200 dark:hover:bg-surface-700' : ''} rounded-md transition-colors`}
@@ -362,6 +442,106 @@ export function Sidebar({ onOpenSettings, onOpenImport }: SidebarProps) {
             <span className="ml-auto text-xs text-surface-400">{settingsShortcut}</span>
           </button>
         </div>
+          </>
+        )}
+
+        {/* Collapsed state - show icons for navigation */}
+        {isCollapsed && (
+          <div className="flex-1 flex flex-col items-center py-2 gap-1 overflow-y-auto">
+            {/* All Tasks */}
+            <Tooltip content="All Tasks" position="right">
+              <button
+                onClick={() => {
+                  setAllTasksViewMutation.mutate();
+                  setActiveAccountMutation.mutate(null);
+                }}
+                className={`p-2 rounded-lg transition-colors ${
+                  activeCalendarId === null && activeTagId === null
+                    ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
+                    : 'text-surface-500 dark:text-surface-400 hover:bg-surface-200 dark:hover:bg-surface-700'
+                }`}
+              >
+                <Inbox className="w-5 h-5" />
+              </button>
+            </Tooltip>
+            
+            {/* Separator */}
+            <div className="w-6 h-px bg-surface-200 dark:bg-surface-700 my-1" />
+            
+            {/* Calendars */}
+            {accounts.flatMap((account) => 
+              account.calendars.map((calendar) => {
+                const CalendarIcon = getIconByName(calendar.icon || 'calendar');
+                const isActive = activeCalendarId === calendar.id;
+                const calendarColor = calendar.color ?? '#3b82f6';
+                return (
+                  <Tooltip key={calendar.id} content={calendar.displayName} position="right">
+                    <button
+                      onClick={() => {
+                        setActiveAccountMutation.mutate(account.id);
+                        setActiveCalendarMutation.mutate(calendar.id);
+                      }}
+                      className={`p-2 rounded-lg transition-colors ${
+                        isActive
+                          ? 'bg-primary-50 dark:bg-primary-900/30'
+                          : 'hover:bg-surface-200 dark:hover:bg-surface-700'
+                      }`}
+                      style={isActive ? { backgroundColor: calendarColor, color: getContrastTextColor(calendarColor) } : undefined}
+                    >
+                      <CalendarIcon 
+                        className="w-5 h-5"
+                        style={{ color: isActive ? getContrastTextColor(calendarColor) : calendarColor }}
+                      />
+                    </button>
+                  </Tooltip>
+                );
+              })
+            )}
+            
+            {/* Tags section separator */}
+            {tags.length > 0 && (
+              <div className="w-6 h-px bg-surface-200 dark:bg-surface-700 my-1" />
+            )}
+            
+            {/* Tags */}
+            {tags.map((tag) => {
+              const isActive = activeTagId === tag.id;
+              const TagIcon = getIconByName(tag.icon || 'tag');
+              return (
+                <Tooltip key={tag.id} content={tag.name} position="right">
+                  <button
+                    onClick={() => {
+                      setActiveTagMutation.mutate(tag.id);
+                    }}
+                    className={`p-2 rounded-lg transition-colors ${
+                      isActive
+                        ? 'bg-primary-50 dark:bg-primary-900/30'
+                        : 'hover:bg-surface-200 dark:hover:bg-surface-700'
+                    }`}
+                    style={isActive ? { backgroundColor: tag.color, color: getContrastTextColor(tag.color) } : undefined}
+                  >
+                    <TagIcon 
+                      className="w-5 h-5"
+                      style={{ color: isActive ? getContrastTextColor(tag.color) : tag.color }}
+                    />
+                  </button>
+                </Tooltip>
+              );
+            })}
+            
+            {/* Settings at bottom */}
+            <div className="mt-auto pt-2 border-t border-surface-200 dark:border-surface-700">
+              <Tooltip content="Settings" position="right">
+                <button
+                  onClick={() => onOpenSettings?.()}
+                  className="p-2 rounded-lg text-surface-500 dark:text-surface-400 hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
+                >
+                  <Settings className="w-5 h-5" />
+                </button>
+              </Tooltip>
+            </div>
+          </div>
+        )}
       </div>
 
       {contextMenu && (
@@ -513,7 +693,7 @@ export function Sidebar({ onOpenSettings, onOpenImport }: SidebarProps) {
                   // delete calendar and its tasks from local state
                   taskData.deleteCalendar(contextMenu.accountId, contextMenu.id);
                 } catch (error) {
-                  console.error('Failed to delete calendar:', error);
+                  log.error('Failed to delete calendar:', error);
                 }
               }
             }}

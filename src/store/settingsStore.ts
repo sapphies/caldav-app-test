@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Priority } from '@/types';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('Settings', '#d946ef');
 
 export type Theme = 'light' | 'dark' | 'system';
 export type AccentColor = string;
@@ -51,8 +54,14 @@ interface SettingsStore {
   defaultPriority: Priority;
   defaultTags: string[]; // Array of tag IDs
 
+  // Sidebar
+  sidebarCollapsed: boolean;
+  sidebarWidth: number; // in pixels
+
   // actions
   setTheme: (theme: Theme) => void;
+  setSidebarCollapsed: (collapsed: boolean) => void;
+  setSidebarWidth: (width: number) => void;
   setAccentColor: (color: AccentColor) => void;
   setAutoSync: (enabled: boolean) => void;
   setSyncInterval: (interval: number) => void;
@@ -71,6 +80,7 @@ interface SettingsStore {
   resetShortcuts: () => void;
   setDefaultPriority: (priority: Priority) => void;
   setDefaultTags: (tagIds: string[]) => void;
+  toggleSidebarCollapsed: () => void;
   exportSettings: () => string;
   importSettings: (json: string) => boolean;
 }
@@ -95,8 +105,13 @@ export const useSettingsStore = create<SettingsStore>()(
       keyboardShortcuts: defaultShortcuts,
       defaultPriority: 'none',
       defaultTags: [],
+      sidebarCollapsed: false,
+      sidebarWidth: 256, // 16rem = 256px
 
       setTheme: (theme) => set({ theme }),
+      setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
+      setSidebarWidth: (sidebarWidth) => set({ sidebarWidth }),
+      toggleSidebarCollapsed: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
       setAccentColor: (accentColor) => set({ accentColor }),
       setAutoSync: (autoSync) => set({ autoSync }),
       setSyncInterval: (syncInterval) => set({ syncInterval }),
@@ -142,6 +157,8 @@ export const useSettingsStore = create<SettingsStore>()(
           keyboardShortcuts: state.keyboardShortcuts,
           defaultPriority: state.defaultPriority,
           defaultTags: state.defaultTags,
+          sidebarCollapsed: state.sidebarCollapsed,
+          sidebarWidth: state.sidebarWidth,
         };
         return JSON.stringify(exportData, null, 2);
       },
@@ -150,7 +167,7 @@ export const useSettingsStore = create<SettingsStore>()(
         try {
           const data = JSON.parse(json);
           if (data.version !== 1) {
-            console.error('Unsupported settings version');
+            log.error('Unsupported settings version');
             return false;
           }
           set({
@@ -171,10 +188,12 @@ export const useSettingsStore = create<SettingsStore>()(
             keyboardShortcuts: data.keyboardShortcuts ?? defaultShortcuts,
             defaultPriority: data.defaultPriority ?? 'none',
             defaultTags: data.defaultTags ?? [],
+            sidebarCollapsed: data.sidebarCollapsed ?? false,
+            sidebarWidth: data.sidebarWidth ?? 256,
           });
           return true;
         } catch (e) {
-          console.error('Failed to import settings:', e);
+          log.error('Failed to import settings:', e);
           return false;
         }
       },

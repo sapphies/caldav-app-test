@@ -1,11 +1,13 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
-import { useAccounts, useSyncQuery } from '@/hooks/queries';
+import { useSyncQuery } from '@/hooks/queries';
 import { useTheme } from '@/hooks/useTheme';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useFileDrop } from '@/hooks/useFileDrop';
-import { useTasks, useUIState } from '@/hooks/queries';
+import { useTasks, useUIState, useAccounts } from '@/hooks/queries';
+import { useSettingsStore } from '@/store/settingsStore';
 import { Sidebar } from '@/components/Sidebar';
+
 import { TaskList } from '@/components/TaskList';
 import { TaskEditor } from '@/components/TaskEditor';
 import { Header } from '@/components/Header';
@@ -18,11 +20,13 @@ function App() {
   useEffect(() => {
     initWebKitDragFix();
   }, []);
-  
+
   const [showSettings, setShowSettings] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [preloadedFile, setPreloadedFile] = useState<{ name: string; content: string } | null>(null);
   const { isSyncing, isOffline, lastSyncTime, syncAll } = useSyncQuery();
+  const { data: accounts = [] } = useAccounts();
+  const { sidebarCollapsed, sidebarWidth, toggleSidebarCollapsed, setSidebarWidth } = useSettingsStore();
   
   // File drop handling via hook
   const {
@@ -40,16 +44,16 @@ function App() {
   });
   
   useTheme();
-
   useNotifications();
   
   useKeyboardShortcuts({
-    onOpenSettings: () => setShowSettings(prev => !prev),
+    onOpenSettings: () => {
+      setShowSettings((prev: boolean) => !prev);
+    },
     onSync: syncAll,
   });
   
   const { data: uiState } = useUIState();
-  const { data: accounts = [] } = useAccounts();
   const { data: tasks = [] } = useTasks();
   const isEditorOpen = uiState?.isEditorOpen ?? false;
   const selectedTaskId = uiState?.selectedTaskId ?? null;
@@ -100,6 +104,10 @@ function App() {
       <Sidebar 
         onOpenSettings={() => setShowSettings(true)} 
         onOpenImport={() => setShowImport(true)}
+        isCollapsed={sidebarCollapsed}
+        width={sidebarWidth}
+        onToggleCollapse={toggleSidebarCollapsed}
+        onWidthChange={setSidebarWidth}
       />
 
       <main className="flex-1 flex flex-col min-w-0">
