@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
-import { useSyncQuery } from '@/hooks/queries';
+import { useAccounts, useSyncQuery } from '@/hooks/queries';
 import { useTheme } from '@/hooks/useTheme';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useFileDrop } from '@/hooks/useFileDrop';
@@ -49,6 +49,7 @@ function App() {
   });
   
   const { data: uiState } = useUIState();
+  const { data: accounts = [] } = useAccounts();
   const { data: tasks = [] } = useTasks();
   const isEditorOpen = uiState?.isEditorOpen ?? false;
   const selectedTaskId = uiState?.selectedTaskId ?? null;
@@ -108,7 +109,13 @@ function App() {
           </div>
         )}
 
-        <Header isSyncing={isSyncing} onSync={syncAll} isOffline={isOffline} lastSyncTime={lastSyncTime} />
+        <Header 
+          isSyncing={isSyncing} 
+          onSync={syncAll}
+          disableSync={accounts.length === 0}
+          isOffline={isOffline} 
+          lastSyncTime={lastSyncTime} 
+        />
 
         <div className="flex-1 flex min-h-0 overflow-hidden">
           <div className={`flex-1 flex flex-col min-w-0 min-h-0 ${isEditorOpen && selectedTask ? 'hidden lg:flex' : ''}`}>

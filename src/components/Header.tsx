@@ -37,9 +37,10 @@ interface HeaderProps {
   isOffline?: boolean;
   lastSyncTime?: Date | null;
   onSync?: () => void;
+  disableSync?: boolean;
 }
 
-export function Header({ isSyncing = false, isOffline = false, lastSyncTime, onSync }: HeaderProps) {
+export function Header({ isSyncing = false, isOffline = false, lastSyncTime, onSync, disableSync = false }: HeaderProps) {
   const { data: uiState } = useUIState();
   const setSearchQueryMutation = useSetSearchQuery();
   const setSortConfigMutation = useSetSortConfig();
@@ -115,21 +116,23 @@ export function Header({ isSyncing = false, isOffline = false, lastSyncTime, onS
           {onSync && (
             <Tooltip 
               content={
-                isOffline 
-                  ? 'Cannot sync while offline' 
-                  : lastSyncTime 
-                    ? `Last synced ${formatDistanceToNow(lastSyncTime, { addSuffix: true })}` 
-                    : `Sync with server (${syncShortcut})`
+                disableSync
+                  ? 'Add an account to enable sync'
+                  : isOffline 
+                    ? 'Cannot sync while offline' 
+                    : lastSyncTime 
+                      ? `Last synced ${formatDistanceToNow(lastSyncTime, { addSuffix: true })}` 
+                      : `Sync with server (${syncShortcut})`
               }
               position="bottom"
             >
               <button
                 onClick={onSync}
-                disabled={isSyncing || isOffline}
+                disabled={isSyncing || isOffline || disableSync}
                 className={`p-2 rounded-lg transition-colors ${
                   isSyncing
                     ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30'
-                    : isOffline
+                    : isOffline || disableSync
                       ? 'text-surface-300 dark:text-surface-600 cursor-not-allowed'
                       : `text-surface-500 dark:text-surface-400 ${!isAnyModalOpen ? 'hover:bg-surface-100 dark:hover:bg-surface-700' : ''}`
                 }`}
