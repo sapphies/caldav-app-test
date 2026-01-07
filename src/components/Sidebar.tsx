@@ -243,7 +243,7 @@ export function Sidebar({ onOpenSettings, onOpenImport, isCollapsed, width, onTo
           >
             <Inbox className="w-4 h-4" />
             <span className="flex-1 text-left">All Tasks</span>
-            <span className="text-xs text-surface-400">
+            <span className="text-xs">
               {getTotalActiveTaskCount()}
             </span>
           </button>
@@ -422,7 +422,7 @@ export function Sidebar({ onOpenSettings, onOpenImport, isCollapsed, width, onTo
                       style={{ color: isActive ? getContrastTextColor(tag.color) : tag.color }}
                     />
                     <span className="flex-1 text-left truncate">{tag.name}</span>
-                    <span className="text-xs text-surface-400">
+                    <span className="text-xs">
                       {getTagTaskCount(tag.id)}
                     </span>
                   </button>
@@ -459,7 +459,7 @@ export function Sidebar({ onOpenSettings, onOpenImport, isCollapsed, width, onTo
                   activeCalendarId === null && activeTagId === null
                     ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
                     : 'text-surface-500 dark:text-surface-400 hover:bg-surface-200 dark:hover:bg-surface-700'
-                }`}
+                }`}   
               >
                 <Inbox className="w-5 h-5" />
               </button>
