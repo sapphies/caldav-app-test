@@ -1,5 +1,6 @@
 import { useTags } from '@/hooks/queries';
 import { useSettingsStore } from '@/store/settingsStore';
+import { getIconByName } from '@/components/IconPicker';
 import type { Priority } from '@/types';
 
 export function TaskDefaultsSettings() {
@@ -53,27 +54,29 @@ export function TaskDefaultsSettings() {
       <div className="rounded-lg border border-surface-200 dark:border-surface-700 p-4 bg-white dark:bg-surface-800">
         <h4 className="text-sm font-medium text-surface-800 dark:text-surface-200 mb-3">Default Tags</h4>
         <div className="flex flex-wrap gap-2">
-          {tags.length > 0 ? tags.map((tag) => (
-            <button
-              key={tag.id}
-              onClick={() => handleTagToggle(tag.id)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                defaultTags.includes(tag.id)
-                  ? 'ring-2 ring-offset-1 ring-primary-500 dark:ring-offset-surface-800'
-                  : 'opacity-60 hover:opacity-100'
-              }`}
-              style={{
-                backgroundColor: `${tag.color}20`,
-                color: tag.color,
-              }}
-            >
-              <span
-                className="w-2 h-2 rounded-full"
-                style={{ backgroundColor: tag.color }}
-              />
-              {tag.name}
-            </button>
-          )) : (
+          {tags.length > 0 ? tags.map((tag) => {
+            const TagIcon = getIconByName(tag.icon || 'tag');
+            const isSelected = defaultTags.includes(tag.id);
+            return (
+              <button
+                key={tag.id}
+                onClick={() => handleTagToggle(tag.id)}
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-all border ${
+                  isSelected
+                    ? ''
+                    : 'opacity-60 hover:opacity-75'
+                }`}
+                style={{
+                  borderColor: tag.color,
+                  backgroundColor: `${tag.color}15`,
+                  color: tag.color,
+                }}
+              >
+                <TagIcon className="w-3 h-3" />
+                {tag.name}
+              </button>
+            );
+          }) : (
             <p className="text-sm text-surface-500 dark:text-surface-400">
               No tags available. Create tags first to set defaults.
             </p>
