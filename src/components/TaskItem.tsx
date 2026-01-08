@@ -16,6 +16,8 @@ import {
   useUIState,
   useAccounts,
   useSetActiveTag,
+  useSetActiveCalendar,
+  useSetActiveAccount,
 } from '@/hooks/queries';
 import * as taskData from '@/lib/taskData';
 import { useSettingsStore } from '@/store/settingsStore';
@@ -50,6 +52,8 @@ export function TaskItem({ task, depth, ancestorIds, isDragEnabled, isOverlay }:
   const toggleTaskCompleteMutation = useToggleTaskComplete();
   const setSelectedTaskMutation = useSetSelectedTask();
   const setActiveTagMutation = useSetActiveTag();
+  const setActiveCalendarMutation = useSetActiveCalendar();
+  const setActiveAccountMutation = useSetActiveAccount();
   const { accentColor } = useSettingsStore();
   const { contextMenu, handleContextMenu, handleCloseContextMenu, setContextMenu } = useContextMenu();
   const [showExportModal, setShowExportModal] = useState(false);
@@ -238,9 +242,20 @@ export function TaskItem({ task, depth, ancestorIds, isDragEnabled, isOverlay }:
                 );
               })}
 
-              {showCalendar && (
-                <span
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border"
+              {showCalendar && calendar && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // Find the account that owns this calendar
+                    const account = accounts.find(a => 
+                      a.calendars.some(c => c.id === calendar.id)
+                    );
+                    if (account) {
+                      setActiveAccountMutation.mutate(account.id);
+                    }
+                    setActiveCalendarMutation.mutate(calendar.id);
+                  }}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border hover:opacity-80 transition-opacity"
                   style={{ 
                     borderColor: calendarColor,
                     backgroundColor: `${calendarColor}15`,
@@ -248,8 +263,8 @@ export function TaskItem({ task, depth, ancestorIds, isDragEnabled, isOverlay }:
                   }}
                 >
                   <Calendar className="w-3 h-3" />
-                  {calendar?.displayName || 'Calendar'}
-                </span>
+                  {calendar.displayName || 'Calendar'}
+                </button>
               )}
 
               {totalSubtasks > 0 && (
