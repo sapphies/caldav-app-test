@@ -105,7 +105,8 @@ export function TaskEditor({ task }: TaskEditorProps) {
   }, [task.id]);
 
   // Handle escape key to close editor
-  useModalEscapeKey(() => setEditorOpenMutation.mutate(false));
+  // Mark as panel so it yields to modal dialogs
+  useModalEscapeKey(() => setEditorOpenMutation.mutate(false), { isPanel: true });
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     updateTaskMutation.mutate({ id: task.id, updates: { title: e.target.value } });
