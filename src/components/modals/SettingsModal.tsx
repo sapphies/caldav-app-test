@@ -105,7 +105,7 @@ export function SettingsModal({ onClose, initialCategory, initialSubtab }: Setti
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-fade-in">
       <div 
-        className="bg-white dark:bg-surface-800 rounded-xl shadow-xl w-full max-w-2xl h-[80vh] flex flex-col animate-scale-in"
+        className="bg-white dark:bg-surface-800 rounded-xl shadow-xl w-full max-w-3xl h-[80vh] flex flex-col animate-scale-in"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-4 border-b border-surface-200 dark:border-surface-700">
