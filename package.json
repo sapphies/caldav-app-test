@@ -1,6 +1,6 @@
 {
   "name": "caldav-tasks",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "author": "Sapphic Angels",
   "description": "A cross-platform CalDAV task management app. Currently in very early alpha!",
   "type": "module",
@@ -9,7 +9,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "lint": "biome lint ."
   },
   "pnpm": {
     "updateConfig": {
