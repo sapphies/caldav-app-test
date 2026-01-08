@@ -117,7 +117,7 @@ export function Header({ isSyncing = false, isOffline = false, lastSyncTime, onS
             <Tooltip 
               content={
                 disableSync
-                  ? 'Add an account to enable sync'
+                  ? 'Add an account to be able to use sync'
                   : isOffline 
                     ? 'Cannot sync while offline' 
                     : lastSyncTime 
