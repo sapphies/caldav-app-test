@@ -50,19 +50,23 @@ export function ImportModal({ isOpen, onClose, preloadedFile }: ImportModalProps
     }
   }, [isOpen, accounts, selectedAccountId, hasAccounts]);
 
-  // set default calendar when account changes
+  // set default calendar when account changes - only if calendar doesn't belong to account
   useEffect(() => {
     if (selectedAccountId) {
       const cals = allCalendars.filter(
         (cal) => cal.accountId === selectedAccountId
       );
-      if (cals.length > 0) {
-        setSelectedCalendarId(cals[0].id);
-      } else {
-        setSelectedCalendarId('');
+      // only reset calendar if current selection doesn't belong to the selected account
+      const currentCalBelongsToAccount = cals.some(c => c.id === selectedCalendarId);
+      if (!currentCalBelongsToAccount) {
+        if (cals.length > 0) {
+          setSelectedCalendarId(cals[0].id);
+        } else {
+          setSelectedCalendarId('');
+        }
       }
     }
-  }, [selectedAccountId, allCalendars]);
+  }, [selectedAccountId]);
 
   // handle preloaded file
   useEffect(() => {
