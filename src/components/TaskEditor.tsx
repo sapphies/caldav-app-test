@@ -374,11 +374,12 @@ export function TaskEditor({ task }: TaskEditorProps) {
               return (
                 <span
                   key={tag.id}
-                  className="inline-flex items-center gap-1.5 pl-2 pr-1 py-1 rounded-full text-xs font-medium group"
-                  style={{ 
-                    backgroundColor: `${tag.color}20`,
-                    color: tag.color,
-                  }}
+                  className="inline-flex items-center gap-1.5 pl-2 pr-1 py-1 rounded border text-xs font-medium group"
+                    style={{ 
+                      borderColor: tag.color,
+                      backgroundColor: `${tag.color}15`,
+                      color: tag.color,
+                    }}
                 >
                   <TagIcon className="w-3 h-3" />
                   {tag.name}
