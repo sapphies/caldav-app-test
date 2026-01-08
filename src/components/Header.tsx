@@ -230,7 +230,7 @@ export function Header({ isSyncing = false, isOffline = false, lastSyncTime, onS
 
           <button
             onClick={handleNewTask}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg border text-sm transition-colors border-primary-400 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 ${!isAnyModalOpen ? 'hover:bg-primary-100 dark:hover:bg-primary-800' : ''} shadow-sm`}          >
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg border text-sm transition-colors border-primary-400 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 ${!isAnyModalOpen ? 'hover:bg-primary-100 dark:hover:bg-primary-800' : ''} shadow-sm`}>
             <Plus className="w-4 h-4" />
             New Task
           </button>
