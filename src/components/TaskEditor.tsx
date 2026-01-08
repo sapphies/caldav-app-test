@@ -32,6 +32,7 @@ import * as taskData from '@/lib/taskData';
 import { useSettingsStore } from '@/store/settingsStore';
 import { Task, Priority } from '@/types';
 import { getContrastTextColor } from '../utils/color';
+import { filterCalDavDescription } from '@/utils/ical';
 import { useConfirmTaskDelete } from '@/hooks/useConfirmTaskDelete';
 import { getIconByName } from './IconPicker';
 import { SubtaskTreeItem } from './SubtaskTreeItem';
@@ -252,7 +253,7 @@ export function TaskEditor({ task }: TaskEditorProps) {
             Description
           </label>
           <textarea
-            value={task.description}
+            value={filterCalDavDescription(task.description)}
             onChange={handleDescriptionChange}
             placeholder="Add a description..."
             rows={4}
