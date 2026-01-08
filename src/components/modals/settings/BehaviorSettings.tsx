@@ -72,15 +72,15 @@ export function BehaviorSettings() {
           />
         </label>
 
-        <div className="flex items-center justify-between">
-          <div>
+        <div>
+          <div className="mb-2">
             <p className="text-sm text-surface-700 dark:text-surface-300">When deleting a task with subtasks</p>
             <p className="text-xs text-surface-500 dark:text-surface-400">Choose what happens to subtasks</p>
           </div>
           <select
             value={deleteSubtasksWithParent}
             onChange={(e) => setDeleteSubtasksWithParent(e.target.value as SubtaskDeletionBehavior)}
-            className="px-3 py-1.5 text-sm border border-surface-200 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-800 dark:text-surface-200 rounded-lg focus:outline-none focus:border-primary-300"
+            className="w-full px-3 py-1.5 text-sm border border-surface-200 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-800 dark:text-surface-200 rounded-lg focus:outline-none focus:border-primary-300"
           >
             <option value="delete">Delete all subtasks</option>
             <option value="keep">Keep subtasks</option>
