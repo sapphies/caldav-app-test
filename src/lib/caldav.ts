@@ -71,8 +71,21 @@ class CalDAVService {
   </d:prop>
 </d:propfind>`, '0');
         
+        // Check for specific HTTP error codes at the well-known endpoint
+        if (wellKnownResponse.status === 429) {
+          throw new Error('Server reported a 429 error (Rate limit exceeded). Please wait a moment and try again.');
+        }
         if (wellKnownResponse.status === 401) {
-          throw new Error('Authentication failed. Please check your username and password.');
+          throw new Error('Server reportes a 401 error (Authentication failed). Please check your username and password.');
+        }
+        if (wellKnownResponse.status === 403) {
+          throw new Error('Server reported a 403 error (Access forbidden). Please check your credentials and permissions.');
+        }
+        if (wellKnownResponse.status === 404) {
+          throw new Error('Server reported a 404 error (Not Found). The CalDAV service may not be found at this URL. Please check the server URL.');
+        }
+        if (wellKnownResponse.status >= 500) {
+          throw new Error(`Server reported a ${wellKnownResponse.status} error. Please try again later or contact your server administrator.`);
         }
         
         // step 2: discover current-user-principal
@@ -487,25 +500,37 @@ class CalDAVService {
   </d:prop>
 </d:propfind>`;
 
-    try {
-      const response = await propfind(davRootUrl, credentials, propfindBody, '0');
-      
-      if (response.status !== 207) {
-        return null;
-      }
+    const response = await propfind(davRootUrl, credentials, propfindBody, '0');
 
-      const results = parseMultiStatus(response.body);
-      if (results.length === 0) {
-        return null;
-      }
+    // Check for specific HTTP error codes and throw meaningful errors
+    if (response.status === 429) {
+      throw new Error('Rate limit exceeded. Please wait a moment and try again.');
+    }
+    if (response.status === 401) {
+      throw new Error('Authentication failed. Please check your username and password.');
+    }
+    if (response.status === 403) {
+      throw new Error('Access forbidden. Please check your credentials and permissions.');
+    }
+    if (response.status === 404) {
+      throw new Error('CalDAV service not found at this URL. Please check the server URL.');
+    }
+    if (response.status >= 500) {
+      throw new Error(`Server error (${response.status}). Please try again later or contact your server administrator.`);
+    }
+    if (response.status !== 207) {
+      return null;
+    }
 
-      // extract current-user-principal href (handle namespace prefixes like d:current-user-principal)
-      const match = response.body.match(/<[^:>]*:?current-user-principal[^>]*>\s*<[^:>]*:?href[^>]*>([^<]+)<\/[^:>]*:?href>/i);
-      if (match) {
-        return match[1];
-      }
-    } catch (error) {
-      log.error('Error discovering principal:', error);
+    const results = parseMultiStatus(response.body);
+    if (results.length === 0) {
+      return null;
+    }
+
+    // extract current-user-principal href (handle namespace prefixes like d:current-user-principal)
+    const match = response.body.match(/<[^:>]*:?current-user-principal[^>]*>\s*<[^:>]*:?href[^>]*>([^<]+)<\/[^:>]*:?href>/i);
+    if (match) {
+      return match[1];
     }
 
     return null;
@@ -525,20 +550,32 @@ class CalDAVService {
   </d:prop>
 </d:propfind>`;
 
-    try {
-      const response = await propfind(principalUrl, credentials, propfindBody, '0');
-      
-      if (response.status !== 207) {
-        return null;
-      }
+    const response = await propfind(principalUrl, credentials, propfindBody, '0');
 
-      // extract calendar-home-set href (handle namespace prefixes like c:calendar-home-set, cal:calendar-home-set, etc.)
-      const match = response.body.match(/<[^:>]*:?calendar-home-set[^>]*>\s*<[^:>]*:?href[^>]*>([^<]+)<\/[^:>]*:?href>/i);
-      if (match) {
-        return match[1];
-      }
-    } catch (error) {
-      log.error('Error discovering calendar home:', error);
+    // Check for specific HTTP error codes and throw meaningful errors
+    if (response.status === 429) {
+      throw new Error('Rate limit exceeded. Please wait a moment and try again.');
+    }
+    if (response.status === 401) {
+      throw new Error('Authentication failed. Please check your username and password.');
+    }
+    if (response.status === 403) {
+      throw new Error('Access forbidden. Please check your credentials and permissions.');
+    }
+    if (response.status === 404) {
+      throw new Error('CalDAV principal not found. Please check the server URL.');
+    }
+    if (response.status >= 500) {
+      throw new Error(`Server error (${response.status}). Please try again later or contact your server administrator.`);
+    }
+    if (response.status !== 207) {
+      return null;
+    }
+
+    // extract calendar-home-set href (handle namespace prefixes like c:calendar-home-set, cal:calendar-home-set, etc.)
+    const match = response.body.match(/<[^:>]*:?calendar-home-set[^>]*>\s*<[^:>]*:?href[^>]*>([^<]+)<\/[^:>]*:?href>/i);
+    if (match) {
+      return match[1];
     }
 
     return null;
