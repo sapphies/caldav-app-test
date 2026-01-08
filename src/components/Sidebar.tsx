@@ -477,10 +477,12 @@ export function Sidebar({ onOpenSettings, onOpenImport, isCollapsed, width, onTo
                 return (
                   <Tooltip key={calendar.id} content={calendar.displayName} position="right">
                     <button
+                      data-context-menu
                       onClick={() => {
                         setActiveAccountMutation.mutate(account.id);
                         setActiveCalendarMutation.mutate(calendar.id);
                       }}
+                      onContextMenu={(e) => handleContextMenu(e, 'calendar', calendar.id, account.id)}
                       className={`p-2 rounded-lg transition-colors ${
                         isActive
                           ? 'bg-primary-50 dark:bg-primary-900/30'
@@ -510,9 +512,11 @@ export function Sidebar({ onOpenSettings, onOpenImport, isCollapsed, width, onTo
               return (
                 <Tooltip key={tag.id} content={tag.name} position="right">
                   <button
+                    data-context-menu
                     onClick={() => {
                       setActiveTagMutation.mutate(tag.id);
                     }}
+                    onContextMenu={(e) => handleContextMenu(e, 'tag', tag.id)}
                     className={`p-2 rounded-lg transition-colors ${
                       isActive
                         ? 'bg-primary-50 dark:bg-primary-900/30'
