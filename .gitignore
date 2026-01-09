@@ -17,7 +17,6 @@ target/
 .idea/
 *.swp
 *.swo
-.vscode/
 
 # OS
 .DS_Store
