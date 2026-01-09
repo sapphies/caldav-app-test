@@ -2,10 +2,13 @@ import { useState, useRef, useEffect } from 'react';
 import X from 'lucide-react/icons/x';
 import Info from 'lucide-react/icons/info';
 import Loader2 from 'lucide-react/icons/loader-2';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCreateAccount, useUpdateAccount, useAddCalendar } from '@/hooks/queries';
 import { useModalEscapeKey } from '@/hooks/useModalEscapeKey';
-import { Account, ServerType } from '@/types';
+import { Account, ServerType, Calendar } from '@/types';
 import { caldavService } from '@/lib/caldav';
+import * as taskData from '@/lib/taskData';
+import { generateTagColor } from '@/utils/color';
 import { createLogger } from '@/lib/logger';
 
 const log = createLogger('Account', '#f97316');
@@ -16,6 +19,7 @@ interface AccountModalProps {
 }
 
 export function AccountModal({ account, onClose }: AccountModalProps) {
+  const queryClient = useQueryClient();
   const createAccountMutation = useCreateAccount();
   const updateAccountMutation = useUpdateAccount();
   const addCalendarMutation = useAddCalendar();
@@ -40,6 +44,53 @@ export function AccountModal({ account, onClose }: AccountModalProps) {
     }, 200);
     return () => clearTimeout(timer);
   }, []);
+
+  /**
+   * ensure a tag exists by name, returns the tag ID
+   */
+  const ensureTagExists = (tagName: string): string => {
+    const currentTags = taskData.getAllTags();
+    const existing = currentTags.find(
+      t => t.name.toLowerCase() === tagName.toLowerCase()
+    );
+    
+    if (existing) {
+      return existing.id;
+    }
+    
+    const newTag = taskData.createTag({
+      name: tagName,
+      color: generateTagColor(tagName),
+    });
+    return newTag.id;
+  };
+
+  /**
+   * fetch tasks for a calendar and store them locally
+   */
+  const fetchTasksForCalendar = async (accountId: string, calendar: Calendar) => {
+    try {
+      const remoteTasks = await caldavService.fetchTasks(accountId, calendar);
+      log.info(`Fetched ${remoteTasks.length} tasks from ${calendar.displayName}`);
+      
+      for (const remoteTask of remoteTasks) {
+        // Extract category/tag from the task and create if needed
+        let tagIds: string[] = [];
+        if (remoteTask.categoryId) {
+          const categoryNames = remoteTask.categoryId.split(',').map((s: string) => s.trim()).filter(Boolean);
+          tagIds = categoryNames.map((name: string) => ensureTagExists(name));
+        }
+        
+        // Add the task with tags
+        taskData.createTask({
+          ...remoteTask,
+          tags: tagIds,
+        });
+      }
+    } catch (error) {
+      log.error(`Failed to fetch tasks for calendar ${calendar.displayName}:`, error);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,11 +140,21 @@ export function AccountModal({ account, onClose }: AccountModalProps) {
           password: effectivePassword,
           serverType,
         }, {
-          onSuccess: (newAccount) => {
+          onSuccess: async (newAccount) => {
             // add the fetched calendars
             for (const calendar of calendars) {
               addCalendarMutation.mutate({ accountId: newAccount.id, calendarData: calendar });
             }
+            
+            // fetch tasks for each calendar
+            log.debug('Fetching tasks for all calendars...');
+            for (const calendar of calendars) {
+              await fetchTasksForCalendar(newAccount.id, calendar);
+            }
+            
+            // Invalidate task queries to refresh the UI
+            queryClient.invalidateQueries({ queryKey: ['tasks'] });
+            queryClient.invalidateQueries({ queryKey: ['tags'] });
           }
         });
       }
