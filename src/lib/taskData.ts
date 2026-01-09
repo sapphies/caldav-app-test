@@ -1021,8 +1021,13 @@ export function addCalendar(accountId: string, calendarData: Partial<Calendar>):
           modifiedAt: new Date(),
         };
         
-        // Create the task in the database now that it has a valid calendar
-        db.createTask(updatedTask).catch(e => log.error('Failed to persist task:', e));
+        db.updateTask(task.id, {
+          calendarId: calendar.id,
+          accountId: accountId,
+          localOnly: false,
+          synced: false,
+          modifiedAt: new Date(),
+        }).catch(e => log.error('Failed to update local task:', e));
         
         return updatedTask;
       }
