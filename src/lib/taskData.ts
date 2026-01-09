@@ -1072,14 +1072,8 @@ export function deleteCalendar(accountId: string, calendarId: string): void {
     })),
   ];
   
-  // Get first available calendar from other accounts/calendars for active calendar fallback
-  let newActiveCalendarId = data.ui.activeCalendarId;
-  if (data.ui.activeCalendarId === calendarId) {
-    const otherCalendars = data.accounts
-      .flatMap(acc => acc.calendars)
-      .filter(cal => cal.id !== calendarId);
-    newActiveCalendarId = otherCalendars[0]?.id ?? null;
-  }
+  // check if the active calendar is being deleted
+  const isActiveCalendarDeleted = data.ui.activeCalendarId === calendarId;
   
   saveDataStore({
     ...data,
@@ -1092,9 +1086,12 @@ export function deleteCalendar(accountId: string, calendarId: string): void {
     pendingDeletions: newPendingDeletions,
     ui: {
       ...data.ui,
-      activeCalendarId: newActiveCalendarId,
-      selectedTaskId: tasksToDelete.some(t => t.id === data.ui.selectedTaskId) ? null : data.ui.selectedTaskId,
-      isEditorOpen: tasksToDelete.some(t => t.id === data.ui.selectedTaskId) ? false : data.ui.isEditorOpen,
+      // redirect to All Tasks view instead of another calendar
+      activeCalendarId: isActiveCalendarDeleted ? null : data.ui.activeCalendarId,
+      activeAccountId: isActiveCalendarDeleted ? null : data.ui.activeAccountId,
+      activeTagId: isActiveCalendarDeleted ? null : data.ui.activeTagId,
+      selectedTaskId: null,
+      isEditorOpen: false,
     },
   });
 }
