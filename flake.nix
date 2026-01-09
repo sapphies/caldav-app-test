@@ -1,5 +1,5 @@
 {
-  description = "caldav-tasks - Cross-platform task management app";
+  description = "caldav-tasks - Cross-platform CalDAV task management app";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -22,27 +22,36 @@
           extensions = [ "rust-src" "rust-analyzer" ];
         };
 
-        # macOS-specific dependencies - use apple-sdk for frameworks
-        darwinDeps = with pkgs; lib.optionals stdenv.isDarwin [
+        # macOS-specific dependencies for dev shell
+        darwinDevDeps = with pkgs; lib.optionals stdenv.isDarwin [
           libiconv
           apple-sdk_14
         ];
 
-        # Linux-specific dependencies
-        linuxDeps = with pkgs; lib.optionals stdenv.isLinux [
-          webkitgtk
+        # Linux-specific dependencies for dev shell
+        linuxDevDeps = with pkgs; lib.optionals stdenv.isLinux [
+          webkitgtk_4_1
           gtk3
-          libsoup
+          libsoup_3
           glib
           gdk-pixbuf
           pango
           cairo
           atk
-          libappindicator-gtk3
+          libayatana-appindicator
         ];
+
+        caldav-tasks = pkgs.callPackage ./nix/package.nix {
+          src = ./.;
+        };
 
       in
       {
+        packages = {
+          default = caldav-tasks;
+          inherit caldav-tasks;
+        };
+
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
             # Rust
@@ -59,7 +68,7 @@
 
             # Tauri dependencies
             libiconv
-          ] ++ darwinDeps ++ linuxDeps;
+          ] ++ darwinDevDeps ++ linuxDevDeps;
 
           shellHook = ''
             echo "caldav-tasks dev environment"
@@ -68,6 +77,7 @@
             echo "  just install    - install dependencies"
             echo "  just dev        - start development server"
             echo "  just build      - build app"
+            echo "  nix build       - build app with nix"
             echo ""
           '';
 
@@ -77,7 +87,7 @@
           # For pkg-config to find libraries
           PKG_CONFIG_PATH = pkgs.lib.makeSearchPath "lib/pkgconfig" (with pkgs; [
             openssl.dev
-          ] ++ linuxDeps);
+          ] ++ linuxDevDeps);
         };
       }
     );
