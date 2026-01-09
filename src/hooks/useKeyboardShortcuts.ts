@@ -16,6 +16,7 @@ import { useConfirmTaskDelete } from '@/hooks/useConfirmTaskDelete';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useModalState } from '@/context/modalStateContext';
 import { getIsKeyboardDragging } from '@/lib/dragState';
+import { flattenTasks } from '@/utils/tree';
 
 interface UseKeyboardShortcutsOptions {
   onOpenSettings?: () => void;
@@ -41,6 +42,15 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
   const { confirmAndDelete } = useConfirmTaskDelete();
   const { isOpen: isConfirmDialogOpen } = useConfirmDialog();
   const { isAnyModalOpen } = useModalState();
+
+  // build the flattened task list that matches visual rendering order of tasks when using keyboard navigation
+  const flattenedTasks = useMemo(() => {
+    const topLevelTasks = filteredTasks.filter((task) => !task.parentUid);
+    const sortedTopLevel = taskData.getSortedTasks(topLevelTasks, sortConfig);
+    return flattenTasks(sortedTopLevel, taskData.getChildTasks, (tasks) =>
+      taskData.getSortedTasks(tasks, sortConfig)
+    );
+  }, [filteredTasks, sortConfig]);
 
   const handleNewTask = useCallback(() => {
     createTaskMutation.mutate({ title: '' }, {
@@ -82,36 +92,32 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
   }, [setSearchQueryMutation, setEditorOpenMutation]);
 
   const handleNavigateUp = useCallback(() => {
-    const sortedTasks = taskData.getSortedTasks(filteredTasks, sortConfig);
-    
-    if (sortedTasks.length === 0) return;
+    if (flattenedTasks.length === 0) return;
     
     if (!selectedTaskId) {
-      setSelectedTaskMutation.mutate(sortedTasks[0].id);
+      setSelectedTaskMutation.mutate(flattenedTasks[0].id);
       return;
     }
     
-    const currentIndex = sortedTasks.findIndex((t) => t.id === selectedTaskId);
+    const currentIndex = flattenedTasks.findIndex((t) => t.id === selectedTaskId);
     if (currentIndex > 0) {
-      setSelectedTaskMutation.mutate(sortedTasks[currentIndex - 1].id);
+      setSelectedTaskMutation.mutate(flattenedTasks[currentIndex - 1].id);
     }
-  }, [selectedTaskId, filteredTasks, sortConfig, setSelectedTaskMutation]);
+  }, [selectedTaskId, flattenedTasks, setSelectedTaskMutation]);
 
   const handleNavigateDown = useCallback(() => {
-    const sortedTasks = taskData.getSortedTasks(filteredTasks, sortConfig);
-    
-    if (sortedTasks.length === 0) return;
+    if (flattenedTasks.length === 0) return;
     
     if (!selectedTaskId) {
-      setSelectedTaskMutation.mutate(sortedTasks[0].id);
+      setSelectedTaskMutation.mutate(flattenedTasks[0].id);
       return;
     }
     
-    const currentIndex = sortedTasks.findIndex((t) => t.id === selectedTaskId);
-    if (currentIndex < sortedTasks.length - 1) {
-      setSelectedTaskMutation.mutate(sortedTasks[currentIndex + 1].id);
+    const currentIndex = flattenedTasks.findIndex((t) => t.id === selectedTaskId);
+    if (currentIndex < flattenedTasks.length - 1) {
+      setSelectedTaskMutation.mutate(flattenedTasks[currentIndex + 1].id);
     }
-  }, [selectedTaskId, filteredTasks, sortConfig, setSelectedTaskMutation]);
+  }, [selectedTaskId, flattenedTasks, setSelectedTaskMutation]);
 
   const handleOpenSettings = useCallback(() => {
     // If settings is already open, this will close it (toggle behavior)
