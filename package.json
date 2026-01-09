@@ -1,6 +1,6 @@
 {
   "name": "caldav-tasks",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "author": "Sapphic Angels",
   "description": "A cross-platform CalDAV task management app. Currently in very early alpha!",
   "type": "module",

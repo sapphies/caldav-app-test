@@ -1,6 +1,6 @@
 [package]
 name = "caldav-tasks"
-version = "0.4.3"
+version = "0.4.4"
 description = "a cross-platform CalDAV task management app"
 authors = ["you"]
 license = ""
