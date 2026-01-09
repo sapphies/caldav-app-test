@@ -940,10 +940,7 @@ export function createAccount(accountData: Partial<Account>): Account {
   saveDataStore({
     ...data,
     accounts: [...data.accounts, account],
-    ui: {
-      ...data.ui,
-      activeAccountId: data.ui.activeAccountId || account.id,
-    },
+    ui: data.ui,
   });
   return account;
 }
