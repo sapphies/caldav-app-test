@@ -106,9 +106,17 @@ export function useSyncQuery() {
       }
     }
 
+    // track if we need to redirect to All Tasks
+    const currentUIState = taskData.getUIState();
+    let needsRedirectToAllTasks = false;
+
     // Remove calendars that were deleted on server
     for (const localCalendar of localCalendars) {
       if (!remoteCalendarIds.has(localCalendar.id)) {
+        // check if this was the active calendar
+        if (currentUIState.activeCalendarId === localCalendar.id) {
+          needsRedirectToAllTasks = true;
+        }
         // Remove tasks for this calendar
         const tasks = taskData.getTasksByCalendar(localCalendar.id);
         for (const task of tasks) {
@@ -122,8 +130,15 @@ export function useSyncQuery() {
       taskData.updateAccount(accountId, { calendars: updatedCalendars });
     }
 
+    // if active calendar was deleted, redirect to All Tasks
+    if (needsRedirectToAllTasks) {
+      log.info('Active calendar was deleted on server, redirecting to All Tasks');
+      taskData.setAllTasksView();
+      queryClient.invalidateQueries({ queryKey: ['uiState'] });
+    }
+
     return updatedCalendars;
-  }, []);
+  }, [queryClient]);
 
   /**
    * Ensure a tag exists by name, returns the tag ID
