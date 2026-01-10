@@ -91,12 +91,12 @@ jobs:
           # Add download instructions
           CHANGELOG="${CHANGELOG}---"$'\n\n'"📥 **Download the appropriate installer for your platform from the assets below.**"
 
-          # Escape for GitHub Actions output
-          CHANGELOG="${CHANGELOG//'%'/'%25'}"
-          CHANGELOG="${CHANGELOG//$'\n'/'%0A'}"
-          CHANGELOG="${CHANGELOG//$'\r'/'%0D'}"
-
-          echo "changelog=$CHANGELOG" >> "$GITHUB_OUTPUT"
+          # Use heredoc syntax for multiline output
+          {
+            echo 'changelog<<EOF'
+            echo "$CHANGELOG"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
         id: create_release
