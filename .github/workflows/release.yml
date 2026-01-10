@@ -30,7 +30,7 @@ jobs:
         id: get_version
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Version: $VERSION"
 
       - name: Get previous tag
@@ -38,7 +38,7 @@ jobs:
         run: |
           # Get the most recent tag
           PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          echo "prev_tag=$PREV_TAG" >> $GITHUB_OUTPUT
+          echo "prev_tag=$PREV_TAG" >> "$GITHUB_OUTPUT"
           echo "Previous tag: $PREV_TAG"
 
       - name: Generate changelog
@@ -61,27 +61,27 @@ jobs:
 
           while IFS= read -r line; do
             if [[ "$line" == *"feat:"* ]] || [[ "$line" == *"feat("* ]]; then
-              FEATURES="${FEATURES}${line}\n"
+              FEATURES="${FEATURES}${line}"$'\n'
             elif [[ "$line" == *"fix:"* ]] || [[ "$line" == *"fix("* ]]; then
-              FIXES="${FIXES}${line}\n"
+              FIXES="${FIXES}${line}"$'\n'
             elif [[ -n "$line" ]]; then
-              OTHERS="${OTHERS}${line}\n"
+              OTHERS="${OTHERS}${line}"$'\n'
             fi
           done <<< "$COMMITS"
 
-          # Build changelog
+          # Build changelog with proper newlines
           CHANGELOG=""
 
           if [ -n "$FEATURES" ]; then
-            CHANGELOG="${CHANGELOG}## ✨ Features\n\n${FEATURES}\n"
+            CHANGELOG="${CHANGELOG}## ✨ Features"$'\n\n'"${FEATURES}"$'\n'
           fi
 
           if [ -n "$FIXES" ]; then
-            CHANGELOG="${CHANGELOG}## 🐛 Bug Fixes\n\n${FIXES}\n"
+            CHANGELOG="${CHANGELOG}## 🐛 Bug Fixes"$'\n\n'"${FIXES}"$'\n'
           fi
 
           if [ -n "$OTHERS" ]; then
-            CHANGELOG="${CHANGELOG}## 📝 Other Changes\n\n${OTHERS}\n"
+            CHANGELOG="${CHANGELOG}## 📝 Other Changes"$'\n\n'"${OTHERS}"$'\n'
           fi
 
           if [ -z "$CHANGELOG" ]; then
@@ -89,14 +89,14 @@ jobs:
           fi
 
           # Add download instructions
-          CHANGELOG="${CHANGELOG}\n---\n\n📥 **Download the appropriate installer for your platform from the assets below.**"
+          CHANGELOG="${CHANGELOG}---"$'\n\n'"📥 **Download the appropriate installer for your platform from the assets below.**"
 
           # Escape for GitHub Actions output
           CHANGELOG="${CHANGELOG//'%'/'%25'}"
           CHANGELOG="${CHANGELOG//$'\n'/'%0A'}"
           CHANGELOG="${CHANGELOG//$'\r'/'%0D'}"
 
-          echo "changelog=$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "changelog=$CHANGELOG" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
         id: create_release
