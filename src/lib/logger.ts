@@ -1,7 +1,16 @@
 /**
  * Consistent logging system for the application
  * Provides pretty, categorized logging with different levels
+ * Logs are forwarded to Tauri's logging plugin for persistent file storage
  */
+
+import {
+  attachConsole,
+  debug as tauriDebug,
+  error as tauriError,
+  info as tauriInfo,
+  warn as tauriWarn,
+} from '@tauri-apps/plugin-log';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
@@ -30,6 +39,37 @@ const getDefaultMinLevel = (): LogLevel => {
       window.location.port !== '');
   return isDev ? 'debug' : 'info';
 };
+
+// Forward logs to Tauri's logging plugin for file persistence
+const forwardToTauri = (level: LogLevel, category: string, message: string): void => {
+  const formattedMessage = `[${category}] ${message}`;
+  switch (level) {
+    case 'debug':
+      tauriDebug(formattedMessage);
+      break;
+    case 'info':
+      tauriInfo(formattedMessage);
+      break;
+    case 'warn':
+      tauriWarn(formattedMessage);
+      break;
+    case 'error':
+      tauriError(formattedMessage);
+      break;
+  }
+};
+
+// Attach console to receive logs from Rust side (for Webview target)
+let consoleAttached = false;
+export async function initLogger(): Promise<void> {
+  if (consoleAttached) return;
+  try {
+    await attachConsole();
+    consoleAttached = true;
+  } catch (e) {
+    console.warn('Failed to attach console to Tauri logger:', e);
+  }
+}
 
 class Logger {
   private category: string;
@@ -94,6 +134,13 @@ class Logger {
           : level === 'debug'
             ? console.debug
             : console.log;
+
+    // Format message with args for Tauri logging
+    const fullMessage =
+      args.length > 0 ? `${message} ${args.map((a) => JSON.stringify(a)).join(' ')}` : message;
+
+    // Forward to Tauri for file persistence
+    forwardToTauri(level, this.category, fullMessage);
 
     if (args.length > 0) {
       logMethod(prefix.join(' ') + ' ' + message, ...styles, ...args);

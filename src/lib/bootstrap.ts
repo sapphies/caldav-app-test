@@ -1,7 +1,7 @@
 import { BaseDirectory, remove } from '@tauri-apps/plugin-fs';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { getUIState } from '@/lib/database';
-import { createLogger } from '@/lib/logger';
+import { createLogger, initLogger } from '@/lib/logger';
 import { initializeDataStore } from '@/lib/taskData';
 import { useSettingsStore } from '@/store/settingsStore';
 import { initAppMenu } from '@/utils/menu';
@@ -14,6 +14,8 @@ export interface BootstrapResult {
 }
 
 export async function initializeApp(): Promise<void> {
+  // Initialize logger first so all subsequent logs are captured
+  await initLogger();
   log.info('Starting application initialization...');
 
   log.debug('Initializing data store...');
@@ -97,14 +99,14 @@ export function showBootstrapError(error: unknown): void {
           <div class="flex flex-col justify-center max-w-2xl border border-gray-700 bg-gray-800 p-6 rounded-lg shadow-md">
             <h2 class="text-orange-300 mb-2 text-xl font-bold">Report issue</h2>
             <p class="mb-3 text-sm">
-              If you believe this is a bug, please consider reporting it on the 
+              If you believe this is a bug, please consider reporting it on the
               <a href="https://github.com/sapphies/caldav-tasks/issues" target="_blank" class="text-blue-500 underline">GitHub issues page</a>.
             </p>
             <p class="text-sm">
               Please include the error details above and any steps to reproduce how you encountered this issue.
             </p>
           </div>
-          
+
           <div class="flex flex-col justify-center max-w-2xl border border-gray-700 bg-gray-800 p-6 rounded-lg shadow-md">
             <h2 class="text-orange-300 mb-2 text-xl font-bold">⚠️ Reset Database</h2>
             <p class="mb-3 text-sm">
@@ -119,13 +121,13 @@ export function showBootstrapError(error: unknown): void {
             <div id="resetConfirmSection" class="hidden">
               <p class="text-sm text-yellow-400 font-semibold">Are you sure? This action cannot be undone.</p>
               <div class="flex gap-3 pt-3">
-                <button 
+                <button
                   id="resetConfirmBtn"
                   class="flex-1 bg-[#dc2626] hover:bg-[#b91c1c] text-white font-medium py-2 px-4 rounded"
                 >
                   Yes, Reset Database
                 </button>
-                <button 
+                <button
                   id="resetCancelBtn"
                   class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded"
                 >
@@ -133,7 +135,7 @@ export function showBootstrapError(error: unknown): void {
                 </button>
               </div>
             </div>
-            <button 
+            <button
               id="resetBtn"
               class="bg-[#dc2626] hover:bg-[#b91c1c] text-white font-medium py-2 px-4 rounded"
             >
