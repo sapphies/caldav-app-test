@@ -2,7 +2,7 @@ use lazy_static::lazy_static;
 use std::sync::Mutex;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
-    tray::{TrayIconBuilder, TrayIconEvent},
+    tray::{TrayIconBuilder, TrayIconEvent, TrayIconId},
     App, Emitter, Manager, Wry,
 };
 
@@ -10,6 +10,7 @@ use tauri::{
 lazy_static! {
     static ref MENU_UPDATER: Mutex<Option<Box<dyn Fn(String) + Send>>> = Mutex::new(None);
     static ref SYNC_ITEM: Mutex<Option<MenuItem<Wry>>> = Mutex::new(None);
+    static ref TRAY_VISIBLE: Mutex<bool> = Mutex::new(true);
 }
 
 #[tauri::command]
@@ -35,6 +36,17 @@ pub async fn update_tray_sync_enabled(
 ) -> Result<(), String> {
     if let Some(sync_item) = SYNC_ITEM.lock().expect("Failed to lock SYNC_ITEM").as_ref() {
         sync_item.set_enabled(enabled).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+/// Set the system tray visibility
+#[tauri::command]
+pub async fn set_tray_visible(app_handle: tauri::AppHandle, visible: bool) -> Result<(), String> {
+    let tray_id = TrayIconId::new("main");
+    if let Some(tray) = app_handle.tray_by_id(&tray_id) {
+        tray.set_visible(visible).map_err(|e| e.to_string())?;
+        *TRAY_VISIBLE.lock().expect("Failed to lock TRAY_VISIBLE") = visible;
     }
     Ok(())
 }
@@ -73,7 +85,7 @@ pub fn setup_tray(app: &App) -> Result<(), Box<dyn std::error::Error>> {
         ],
     )?;
 
-    let _tray = TrayIconBuilder::new()
+    let _tray = TrayIconBuilder::with_id("main")
         .icon(
             app.default_window_icon()
                 .expect("No default window icon found")
