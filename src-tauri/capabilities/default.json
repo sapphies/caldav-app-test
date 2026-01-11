@@ -33,6 +33,8 @@
     "sql:allow-execute",
     "process:default",
     "core:window:allow-set-focus",
-    "log:default"
+    "os:default",
+    "log:default",
+    "opener:default"
   ]
 }

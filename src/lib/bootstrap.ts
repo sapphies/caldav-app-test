@@ -1,10 +1,16 @@
 import { BaseDirectory, remove } from '@tauri-apps/plugin-fs';
+import { openUrl } from '@tauri-apps/plugin-opener';
+import { arch, exeExtension, locale, platform, version } from '@tauri-apps/plugin-os';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { getUIState } from '@/lib/database';
 import { createLogger, initLogger } from '@/lib/logger';
 import { initializeDataStore } from '@/lib/taskData';
 import { useSettingsStore } from '@/store/settingsStore';
 import { initAppMenu } from '@/utils/menu';
+import { version as AppVersion } from '../../package.json';
+
+const [currentPlatform, currentArch, currentVersion, currentExtension, currentLocale] =
+  await Promise.all([platform(), arch(), version(), exeExtension(), locale()]);
 
 const log = createLogger('Bootstrap', '#a855f7');
 
@@ -88,34 +94,38 @@ export function showBootstrapError(error: unknown): void {
   const root = document.getElementById('root');
   if (root) {
     root.innerHTML = `
-      <div class="flex flex-col items-center justify-center h-full pt-10">
+      <div class="flex flex-col items-center justify-center h-full py-10">
         <h1 class="text-2xl font-extrabold text-red-600">Oh no!! :(</h1>
-        <p class="text-white mb-4">
+        <p class="text-black dark:text-white mb-4">
           The application encountered a critical error during startup. Please see the details below.
         </p>
-        <pre class="bg-gray-800 text-gray-100 p-6 rounded mb-6 overflow-auto">${error}</pre>
+        <pre class="bg-gray-800 text-gray-100 max-w-2xl p-4 rounded mb-6 overflow-auto whitespace-pre-line">
+          ${error}
+        </pre>
 
         <div class="flex flex-col gap-10 pt-3">
           <div class="flex flex-col justify-center max-w-2xl border border-gray-700 bg-gray-800 p-6 rounded-lg shadow-md">
             <h2 class="text-orange-300 mb-2 text-xl font-bold">Report issue</h2>
-            <p class="mb-3 text-sm">
-              If you believe this is a bug, please consider reporting it on the
-              <a href="https://github.com/sapphies/caldav-tasks/issues" target="_blank" class="text-blue-500 underline">GitHub issues page</a>.
+            <p class="mb-3 text-sm text-white">
+              You can help us fix this issue by making a bug report below.
             </p>
-            <p class="text-sm">
-              Please include the error details above and any steps to reproduce how you encountered this issue.
-            </p>
+            <button
+              id="fileIssueBtn"
+              class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded"
+            >
+              Automatically file issue on GitHub
+            </button>
           </div>
 
           <div class="flex flex-col justify-center max-w-2xl border border-gray-700 bg-gray-800 p-6 rounded-lg shadow-md">
             <h2 class="text-orange-300 mb-2 text-xl font-bold">⚠️ Reset Database</h2>
-            <p class="mb-3 text-sm">
+            <p class="mb-3 text-sm text-white">
               If the database is corrupted, you can reset it.
             </p>
-            <p class="mb-3 text-sm">
+            <p class="mb-3 text-sm text-white">
               This will delete all local data including CalDAV accounts, local (non-CalDAV) tasks, and potentially tags.
             </p>
-            <p class="mb-4 text-sm">
+            <p class="mb-4 text-sm text-white">
               This won't delete any tasks or data on your CalDAV server, only local data, but you'll need to set up your CalDAV accounts again on this app.
             </p>
             <div id="resetConfirmSection" class="hidden">
@@ -151,6 +161,36 @@ export function showBootstrapError(error: unknown): void {
     const resetConfirmSection = document.getElementById('resetConfirmSection');
     const resetConfirmBtn = document.getElementById('resetConfirmBtn');
     const resetCancelBtn = document.getElementById('resetCancelBtn');
+    const fileIssueBtn = document.getElementById('fileIssueBtn');
+
+    if (fileIssueBtn) {
+      fileIssueBtn.addEventListener('click', async () => {
+        const errorTitle = `Critical startup error on ${currentPlatform} ${currentVersion}`;
+        const errorBody = `**System Information:**
+\`\`\`
+App Version: ${AppVersion}
+OS: ${currentPlatform}
+Version: ${currentVersion}
+Architecture: ${currentArch}
+App Extension: ${currentExtension || 'Unknown'}
+System Locale: ${currentLocale}
+\`\`\`
+
+**Stacktrace:**
+\`\`\`
+${error}
+\`\`\`
+
+**Steps to reproduce:**
+<!-- Describe the steps that led to this error -->
+
+**Additional context:**
+<!-- Any additional information that might help us debug this issue -->`;
+
+        const issueUrl = `https://github.com/sapphies/caldav-tasks/issues/new?title=${encodeURIComponent(errorTitle)}&body=${encodeURIComponent(errorBody)}`;
+        await openUrl(issueUrl);
+      });
+    }
 
     if (resetBtn && resetConfirmSection && resetConfirmBtn && resetCancelBtn) {
       resetBtn.addEventListener('click', () => {
