@@ -476,7 +476,7 @@ dependencies = [
 
 [[package]]
 name = "caldav-tasks"
-version = "0.4.48"
+version = "0.4.49"
 dependencies = [
  "lazy_static",
  "log",
