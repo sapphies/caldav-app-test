@@ -112,7 +112,7 @@ class CalDAVService {
         }
         if (wellKnownResponse.status === 401) {
           throw new Error(
-            'Server reportes a 401 error (Authentication failed). Please check your username and password.',
+            'Server reported a 401 error (Authentication failed). Please check your username and password.',
           );
         }
         if (wellKnownResponse.status === 403) {
