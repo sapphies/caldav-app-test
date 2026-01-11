@@ -73,7 +73,9 @@ export async function showWindow(delay: number = 200): Promise<void> {
 export async function deleteDatabase(): Promise<void> {
   try {
     log.warn('Deleting database file...');
-    await remove('caldav-tasks.db', { baseDir: BaseDirectory.AppLocalData });
+    const baseDir =
+      currentPlatform === 'macos' ? BaseDirectory.AppLocalData : BaseDirectory.AppConfig;
+    await remove('caldav-tasks.db', { baseDir });
     log.info('Database file deleted successfully');
 
     // Relaunch the app so migrations run on the fresh database
