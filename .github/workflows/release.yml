@@ -200,7 +200,7 @@ jobs:
           uploadOnly: true
 
       - uses: tauri-apps/tauri-action@v0
-        if: '!startsWith(matrix.platform, "ubuntu")'
+        if: ${{ !startsWith(matrix.platform, 'ubuntu') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
