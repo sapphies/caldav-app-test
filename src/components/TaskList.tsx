@@ -46,6 +46,7 @@ export function TaskList() {
 
   const sortConfig = uiState?.sortConfig ?? { mode: 'manual' as const, direction: 'asc' as const };
   const searchQuery = uiState?.searchQuery ?? '';
+  const showCompletedTasks = uiState?.showCompletedTasks ?? true;
 
   const [activeTask, setActiveTask] = useState<FlattenedTask | null>(null);
   const [targetIndent, setTargetIndent] = useState<number>(0);
@@ -68,13 +69,24 @@ export function TaskList() {
     [topLevelTasks, sortConfig],
   );
 
+  const getFilteredChildTasks = useCallback(
+    (parentUid: string) => {
+      const children = taskData.getChildTasks(parentUid);
+      if (!showCompletedTasks) {
+        return children.filter((task) => !task.completed);
+      }
+      return children;
+    },
+    [showCompletedTasks],
+  );
+
   // flatten the tree into a single list with depth info
   const flattenedTasks = useMemo(
     () =>
-      flattenTasks(sortedTasks, taskData.getChildTasks, (tasks) =>
+      flattenTasks(sortedTasks, getFilteredChildTasks, (tasks) =>
         taskData.getSortedTasks(tasks, sortConfig),
       ),
-    [sortedTasks, sortConfig],
+    [sortedTasks, getFilteredChildTasks, sortConfig],
   );
 
   // Clear active task if it no longer exists (e.g., was deleted during drag)

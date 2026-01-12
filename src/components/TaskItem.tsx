@@ -63,11 +63,16 @@ export function TaskItem({ task, depth, ancestorIds, isDragEnabled, isOverlay }:
 
   const selectedTaskId = uiState?.selectedTaskId ?? null;
   const activeCalendarId = uiState?.activeCalendarId ?? null;
+  const showCompletedTasks = uiState?.showCompletedTasks ?? true;
 
   // get contrast color for checkbox checkmark
   const checkmarkColor = getContrastTextColor(accentColor);
 
   const childCount = taskData.countChildren(task.uid);
+  const allChildTasks = taskData.getChildTasks(task.uid);
+  const hiddenChildCount = !showCompletedTasks
+    ? allChildTasks.filter((child) => child.completed).length
+    : 0;
   const completedSubtasks = task.subtasks.filter((s) => s.completed).length;
   const totalSubtasks = task.subtasks.length;
 

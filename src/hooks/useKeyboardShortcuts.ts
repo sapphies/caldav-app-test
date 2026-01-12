@@ -52,10 +52,19 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
   const flattenedTasks = useMemo(() => {
     const topLevelTasks = filteredTasks.filter((task) => !task.parentUid);
     const sortedTopLevel = taskData.getSortedTasks(topLevelTasks, sortConfig);
-    return flattenTasks(sortedTopLevel, taskData.getChildTasks, (tasks) =>
+
+    const getFilteredChildTasks = (parentUid: string) => {
+      const children = taskData.getChildTasks(parentUid);
+      if (!showCompletedTasks) {
+        return children.filter((task) => !task.completed);
+      }
+      return children;
+    };
+
+    return flattenTasks(sortedTopLevel, getFilteredChildTasks, (tasks) =>
       taskData.getSortedTasks(tasks, sortConfig),
     );
-  }, [filteredTasks, sortConfig]);
+  }, [filteredTasks, sortConfig, showCompletedTasks]);
 
   const handleNewTask = useCallback(() => {
     createTaskMutation.mutate(
