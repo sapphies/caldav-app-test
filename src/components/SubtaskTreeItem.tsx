@@ -60,12 +60,13 @@ export function SubtaskTreeItem({
   return (
     <div>
       <div
-        className="flex items-center gap-2 group py-1"
+        className="group/row flex items-center gap-2 py-1 hover:bg-surface-50 dark:hover:bg-surface-800/50 rounded"
         style={{ paddingLeft: `${depth * 16 + 8}px` }}
       >
         {/* Expand/collapse button */}
         {childCount > 0 ? (
           <button
+            type="button"
             onClick={toggleExpanded}
             className="flex items-center gap-0.5 px-1.5 py-0.5 rounded border border-surface-200 dark:border-surface-600 bg-surface-50 dark:bg-surface-800 hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors text-xs text-surface-500 dark:text-surface-400"
           >
@@ -77,7 +78,7 @@ export function SubtaskTreeItem({
             <span>{totalDescendants}</span>
           </button>
         ) : (
-          <div className="w-[34px]" /> // Spacer for alignment
+          <div className="w-[34px]" />
         )}
 
         {/* Priority indicator */}
@@ -87,9 +88,10 @@ export function SubtaskTreeItem({
 
         {/* Checkbox */}
         <button
+          type="button"
           onClick={() => updateTask(task.id, { completed: !task.completed })}
           className={`
-            w-5 h-5 rounded border-2 flex items-center justify-center transition-all flex-shrink-0
+            w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0
             ${
               task.completed
                 ? 'bg-primary-500 border-primary-500'
@@ -114,10 +116,11 @@ export function SubtaskTreeItem({
 
         {/* Delete button */}
         <button
+          type="button"
           onClick={async () => {
             await confirmAndDelete(task.id);
           }}
-          className="opacity-0 group-hover:opacity-100 p-1 text-surface-400 hover:text-red-500 dark:hover:text-red-400 transition-all flex-shrink-0"
+          className="invisible group-hover/row:visible p-1 flex-shrink-0 text-surface-400 hover:!text-red-500 dark:hover:!text-red-400"
         >
           <X className="w-4 h-4" />
         </button>
