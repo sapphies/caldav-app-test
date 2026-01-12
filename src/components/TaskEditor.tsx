@@ -111,6 +111,7 @@ export function TaskEditor({ task }: TaskEditorProps) {
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showDueDatePicker, setShowDueDatePicker] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
+  const editorContainerRef = useRef<HTMLDivElement>(null);
   const childTasks = taskData.getChildTasks(task.uid);
   const childCount = taskData.countChildren(task.uid);
   const taskTags = (task.tags || [])
@@ -139,7 +140,33 @@ export function TaskEditor({ task }: TaskEditorProps) {
   }, [task.id]);
 
   // Handle escape key to close editor
-  // Mark as panel so it yields to modal dialogs
+  // first unfocus any focused input, then close on second ESC press
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        const activeElement = document.activeElement as HTMLElement;
+
+        // Check if focus is on an input or textarea within the editor
+        if (
+          editorContainerRef.current?.contains(activeElement) &&
+          (activeElement instanceof HTMLInputElement ||
+            activeElement instanceof HTMLTextAreaElement)
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          activeElement.blur();
+          return;
+        }
+      }
+    };
+
+    // add listener in capture phase with high priority
+    window.addEventListener('keydown', handleEsc, { capture: true });
+    return () => window.removeEventListener('keydown', handleEsc, { capture: true });
+  }, []);
+
+  // mark as panel so it yields to modal dialogs (closes on ESC when no input is focused)
   useModalEscapeKey(() => setEditorOpenMutation.mutate(false), { isPanel: true });
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -247,7 +274,7 @@ export function TaskEditor({ task }: TaskEditorProps) {
   };
 
   return (
-    <div className={`flex flex-col h-full`}>
+    <div className={`flex flex-col h-full`} ref={editorContainerRef}>
       <div className="flex items-center justify-between p-4 border-b border-surface-200 dark:border-surface-700">
         <h2 className="text-lg font-semibold text-surface-800 dark:text-surface-200">Edit Task</h2>
         <div className="flex items-center gap-2">
