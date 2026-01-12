@@ -64,6 +64,7 @@ export function TaskDefaultsSettings() {
         <div className="flex gap-2">
           {priorities.map((p) => (
             <button
+              type="button"
               key={p.value}
               onClick={() => setDefaultPriority(p.value)}
               className={`
@@ -92,6 +93,7 @@ export function TaskDefaultsSettings() {
               const isSelected = defaultTags.includes(tag.id);
               return (
                 <button
+                  type="button"
                   key={tag.id}
                   onClick={() => handleTagToggle(tag.id)}
                   className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-all border ${

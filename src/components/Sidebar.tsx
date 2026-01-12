@@ -263,6 +263,7 @@ export function Sidebar({
         <div className="h-[53px] px-2 flex items-center justify-center border-b border-surface-200 dark:border-surface-700 shrink-0">
           {isCollapsed ? (
             <button
+              type="button"
               onClick={onToggleCollapse}
               className="p-2 text-surface-500 dark:text-surface-400 hover:text-surface-700 dark:hover:text-surface-200 hover:bg-surface-200 dark:hover:bg-surface-700 rounded-lg transition-colors"
               title="Expand sidebar"
@@ -278,6 +279,7 @@ export function Sidebar({
                 <span className="truncate">caldav-tasks</span>
               </h1>
               <button
+                type="button"
                 onClick={onToggleCollapse}
                 className="p-1.5 text-surface-500 dark:text-surface-400 hover:text-surface-700 dark:hover:text-surface-200 hover:bg-surface-200 dark:hover:bg-surface-700 rounded-lg transition-colors shrink-0"
                 title="Collapse sidebar"
@@ -294,6 +296,7 @@ export function Sidebar({
           >
             <div className="flex-1 overflow-y-auto overscroll-contain">
               <button
+                type="button"
                 onClick={() => {
                   setAllTasksViewMutation.mutate();
                   setActiveAccountMutation.mutate(null);
@@ -317,6 +320,7 @@ export function Sidebar({
                   <div className="flex items-center gap-1">
                     <Tooltip content="Import tasks" position="top">
                       <button
+                        type="button"
                         onClick={onOpenImport}
                         className={`p-1 rounded ${!isAnyModalOpen ? 'hover:bg-surface-300 dark:hover:bg-surface-600 hover:text-surface-700 dark:hover:text-surface-300' : ''} text-surface-500 dark:text-surface-400 transition-colors`}
                       >
@@ -325,6 +329,7 @@ export function Sidebar({
                     </Tooltip>
                     <Tooltip content="Add account" position="top">
                       <button
+                        type="button"
                         onClick={() => {
                           setEditingAccount(null);
                           setShowAccountModal(true);
@@ -360,6 +365,7 @@ export function Sidebar({
                         </span>
                         <Tooltip content="Add a new calendar" position="top">
                           <button
+                            type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               setShowCreateCalendarModal(account.id);
@@ -375,6 +381,7 @@ export function Sidebar({
                         </Tooltip>
                         <Tooltip content="Account menu" position="top">
                           <button
+                            type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleContextMenu(e as any, 'account', account.id);
@@ -406,6 +413,7 @@ export function Sidebar({
                                 : undefined;
                               return (
                                 <button
+                                  type="button"
                                   key={calendar.id}
                                   data-context-menu
                                   onClick={() => {
@@ -452,6 +460,7 @@ export function Sidebar({
                   </span>
                   <Tooltip content="Add a new tag" position="top">
                     <button
+                      type="button"
                       onClick={() => {
                         setEditingTagId(null);
                         setShowTagModal(true);
@@ -473,6 +482,7 @@ export function Sidebar({
                     const isActive = activeTagId === tag.id;
                     return (
                       <button
+                        type="button"
                         key={tag.id}
                         data-context-menu
                         onClick={() => setActiveTagMutation.mutate(tag.id)}
@@ -503,6 +513,7 @@ export function Sidebar({
 
             <div className="border-t border-surface-200 dark:border-surface-700 p-2 shrink-0">
               <button
+                type="button"
                 onClick={() => onOpenSettings?.()}
                 className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-surface-600 dark:text-surface-400 ${!isAnyModalOpen ? 'hover:bg-surface-200 dark:hover:bg-surface-700' : ''} rounded-md transition-colors`}
               >
@@ -522,6 +533,7 @@ export function Sidebar({
             {/* All Tasks */}
             <Tooltip content="All Tasks" position="right">
               <button
+                type="button"
                 onClick={() => {
                   setAllTasksViewMutation.mutate();
                   setActiveAccountMutation.mutate(null);
@@ -548,6 +560,7 @@ export function Sidebar({
                 return (
                   <Tooltip key={calendar.id} content={calendar.displayName} position="right">
                     <button
+                      type="button"
                       data-context-menu
                       onClick={() => {
                         setActiveAccountMutation.mutate(account.id);
@@ -594,6 +607,7 @@ export function Sidebar({
               return (
                 <Tooltip key={tag.id} content={tag.name} position="right">
                   <button
+                    type="button"
                     data-context-menu
                     onClick={() => {
                       setActiveTagMutation.mutate(tag.id);
@@ -623,6 +637,7 @@ export function Sidebar({
             <div className="mt-auto pt-2 border-t border-surface-200 dark:border-surface-700">
               <Tooltip content="Settings" position="right">
                 <button
+                  type="button"
                   onClick={() => onOpenSettings?.()}
                   className="p-2 rounded-lg text-surface-500 dark:text-surface-400 hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
                 >
@@ -643,6 +658,7 @@ export function Sidebar({
         >
           {contextMenu.type === 'account' && (
             <button
+              type="button"
               onClick={() => {
                 setShowCreateCalendarModal(contextMenu.id);
                 handleCloseContextMenu();
@@ -656,6 +672,7 @@ export function Sidebar({
 
           {contextMenu.type === 'account' && (
             <button
+              type="button"
               onClick={() => {
                 setExportAccountId(contextMenu.id);
                 setShowExportModal(true);
@@ -670,6 +687,7 @@ export function Sidebar({
 
           {contextMenu.type === 'calendar' && (
             <button
+              type="button"
               onClick={() => {
                 // trigger sync for this calendar
                 if (contextMenu.accountId) {
@@ -687,6 +705,7 @@ export function Sidebar({
 
           {contextMenu.type === 'calendar' && (
             <button
+              type="button"
               onClick={() => {
                 setExportCalendarId(contextMenu.id);
                 setShowExportModal(true);
@@ -700,6 +719,7 @@ export function Sidebar({
           )}
 
           <button
+            type="button"
             onClick={async () => {
               if (contextMenu.type === 'account') {
                 const account = accounts.find((a) => a.id === contextMenu.id);
@@ -728,6 +748,7 @@ export function Sidebar({
 
           <div className="border-t border-surface-200 dark:border-surface-700 my-1" />
           <button
+            type="button"
             onClick={async () => {
               // Close context menu immediately before showing confirmation
               handleCloseContextMenu();

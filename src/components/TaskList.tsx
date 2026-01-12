@@ -339,6 +339,7 @@ export function TaskList() {
         </p>
         {!isSearching && (
           <button
+            type="button"
             onClick={handleQuickAdd}
             className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors"
           >
@@ -403,6 +404,7 @@ export function TaskList() {
       </DndContext>
 
       <button
+        type="button"
         onClick={handleQuickAdd}
         className="mt-4 w-full flex items-center gap-3 p-3 text-surface-500 dark:text-surface-400 hover:text-surface-700 dark:hover:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700 rounded-lg transition-colors border-2 border-dashed border-surface-200 dark:border-surface-600 hover:border-surface-300 dark:hover:border-surface-500"
       >

@@ -59,6 +59,7 @@ export function TagModal({ tagId, onClose }: TagModalProps) {
             {existingTag ? 'Edit Tag' : 'New Tag'}
           </h2>
           <button
+            type="button"
             onClick={onClose}
             className="p-2 text-surface-500 hover:text-surface-700 dark:hover:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700 rounded-lg transition-colors"
           >

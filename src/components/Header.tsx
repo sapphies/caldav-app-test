@@ -139,6 +139,7 @@ export function Header({
               position="bottom"
             >
               <button
+                type="button"
                 onClick={onSync}
                 disabled={isSyncing || isOffline || disableSync}
                 className={`p-2 rounded-lg transition-colors ${
@@ -159,6 +160,7 @@ export function Header({
             position="bottom"
           >
             <button
+              type="button"
               onClick={() => setShowCompletedTasksMutation.mutate(!showCompletedTasks)}
               className={`p-2 rounded-lg transition-colors ${
                 showCompletedTasks
@@ -173,6 +175,7 @@ export function Header({
           <div className="relative">
             <Tooltip content="Change sort order" position="bottom">
               <button
+                type="button"
                 onClick={() => setShowSortMenu(!showSortMenu)}
                 className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm transition-colors ${
                   showSortMenu
@@ -198,6 +201,7 @@ export function Header({
                 >
                   {sortOptions.map((option) => (
                     <button
+                      type="button"
                       key={option.value}
                       onClick={() => handleSortChange(option.value)}
                       className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-surface-100 dark:hover:bg-surface-700 ${
@@ -211,6 +215,7 @@ export function Header({
                   ))}
                   <div className="border-t border-surface-200 dark:border-surface-700 my-1" />
                   <button
+                    type="button"
                     onClick={toggleSortDirection}
                     className="w-full flex items-center gap-2 px-3 py-2 text-sm text-surface-700 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700"
                   >
@@ -232,6 +237,7 @@ export function Header({
           </div>
 
           <button
+            type="button"
             onClick={handleNewTask}
             className={`flex items-center gap-2 px-4 py-1.5 rounded-lg border text-sm transition-colors border-primary-400 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 ${!isAnyModalOpen ? 'hover:bg-primary-100 dark:hover:bg-primary-800' : ''} shadow-sm`}
           >

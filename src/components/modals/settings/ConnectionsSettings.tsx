@@ -114,6 +114,7 @@ export function ConnectionsSettings({ accounts }: ConnectionsSettingsProps) {
 
                     <div className="pt-2 border-t border-surface-200 dark:border-surface-600">
                       <button
+                        type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDeleteAccount(account);

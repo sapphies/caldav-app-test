@@ -201,6 +201,7 @@ export function ExportModal({
             </p>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="flex-shrink-0 text-surface-500 dark:text-surface-400 hover:text-surface-700 dark:hover:text-surface-200 transition-colors"
             aria-label="Close"
@@ -217,6 +218,7 @@ export function ExportModal({
             <div className="grid grid-cols-1 gap-2">
               {formats.map((format) => (
                 <button
+                  type="button"
                   key={format.id}
                   onClick={() => setSelectedFormat(format.id)}
                   className={`flex items-start gap-3 p-3 rounded-lg border-2 transition-colors text-left ${
@@ -257,6 +259,7 @@ export function ExportModal({
           )}
 
           <button
+            type="button"
             onClick={() => setShowPreview(!showPreview)}
             className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-surface-50 dark:bg-surface-900 border border-surface-200 dark:border-surface-700 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors text-left"
           >
@@ -280,6 +283,7 @@ export function ExportModal({
 
         <div className="border-t border-surface-200 dark:border-surface-700 p-6 flex gap-3 flex-shrink-0 bg-white dark:bg-surface-800 rounded-b-xl">
           <button
+            type="button"
             onClick={handleCopyToClipboard}
             className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-surface-100 dark:bg-surface-700 text-surface-700 dark:text-surface-300 rounded-lg hover:bg-surface-200 dark:hover:bg-surface-600 transition-colors font-medium"
           >
@@ -287,6 +291,7 @@ export function ExportModal({
             {copied ? 'Copied!' : 'Copy'}
           </button>
           <button
+            type="button"
             onClick={handleExportToFile}
             disabled={exporting}
             className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"

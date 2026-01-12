@@ -113,6 +113,7 @@ export function SettingsModal({ onClose, initialCategory, initialSubtab }: Setti
         <div className="flex items-center justify-between p-4 border-b border-surface-200 dark:border-surface-700">
           <h2 className="text-lg font-semibold text-surface-800 dark:text-surface-200">Settings</h2>
           <button
+            type="button"
             onClick={onClose}
             className="p-2 text-surface-500 hover:text-surface-700 dark:hover:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700 rounded-lg transition-colors"
           >
@@ -134,6 +135,7 @@ export function SettingsModal({ onClose, initialCategory, initialSubtab }: Setti
 
                     return (
                       <button
+                        type="button"
                         key={tab.id}
                         onClick={() => {
                           setActiveCategory(category.id);

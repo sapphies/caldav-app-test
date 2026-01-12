@@ -209,6 +209,7 @@ export function BehaviorSettings() {
               Restart required to apply changes
             </p>
             <button
+              type="button"
               onClick={handleRestart}
               className="px-3 py-1.5 text-sm font-medium bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded-lg transition-colors"
             >

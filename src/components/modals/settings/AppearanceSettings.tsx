@@ -20,6 +20,7 @@ export function AppearanceSettings() {
               { value: 'system' as Theme, icon: <Monitor className="w-4 h-4" />, label: 'System' },
             ].map((option) => (
               <button
+                type="button"
                 key={option.value}
                 onClick={() => setTheme(option.value)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm transition-colors ${
@@ -42,6 +43,7 @@ export function AppearanceSettings() {
           <div className="flex gap-2">
             {ACCENT_COLORS.map((color) => (
               <button
+                type="button"
                 key={color.value}
                 onClick={() => setAccentColor(color.value)}
                 title={color.name}

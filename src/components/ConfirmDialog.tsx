@@ -95,6 +95,7 @@ export function ConfirmDialog({
             )}
           </div>
           <button
+            type="button"
             onClick={onCancel}
             className="flex-shrink-0 ml-3 text-surface-500 dark:text-surface-400 hover:text-surface-700 dark:hover:text-surface-200 hover:bg-surface-100 dark:hover:bg-surface-700 p-1 rounded transition-colors"
             aria-label="Close"
@@ -114,6 +115,7 @@ export function ConfirmDialog({
 
         <div className="px-4 pb-4 flex justify-end gap-2">
           <button
+            type="button"
             onClick={onCancel}
             className="px-4 py-2 text-sm font-medium rounded-lg border border-surface-200 dark:border-surface-700 text-surface-700 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors"
           >
@@ -121,6 +123,7 @@ export function ConfirmDialog({
           </button>
           {alternateLabel && onAlternate && (
             <button
+              type="button"
               onClick={onAlternate}
               className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${getButtonClasses(alternateDestructive, !alternateDestructive && !destructive)}`}
             >
@@ -128,6 +131,7 @@ export function ConfirmDialog({
             </button>
           )}
           <button
+            type="button"
             onClick={onConfirm}
             className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${getButtonClasses(destructive, !alternateLabel)}`}
           >

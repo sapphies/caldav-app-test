@@ -182,6 +182,7 @@ export function TaskItem({ task, depth, ancestorIds, isDragEnabled, isOverlay }:
       >
         <div className="task-checkbox-wrapper flex-shrink-0" onClick={handleCheckboxClick}>
           <button
+            type="button"
             className={`
               w-5 h-5 rounded border-2 flex items-center justify-center transition-all
               ${
@@ -251,6 +252,7 @@ export function TaskItem({ task, depth, ancestorIds, isDragEnabled, isOverlay }:
                 const TagIcon = getIconByName(tag.icon || 'tag');
                 return (
                   <button
+                    type="button"
                     key={tag.id}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -271,6 +273,7 @@ export function TaskItem({ task, depth, ancestorIds, isDragEnabled, isOverlay }:
 
               {showCalendar && calendar && (
                 <button
+                  type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     // Find the account that owns this calendar
@@ -303,6 +306,7 @@ export function TaskItem({ task, depth, ancestorIds, isDragEnabled, isOverlay }:
 
               {childCount > 0 && (
                 <button
+                  type="button"
                   onClick={handleToggleCollapsed}
                   className="collapse-button inline-flex items-center gap-0.5 px-2 py-0.5 rounded border border-surface-200 dark:border-surface-600 bg-surface-50 dark:bg-surface-800 hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors text-xs text-surface-500 dark:text-surface-400"
                 >
@@ -352,6 +356,7 @@ export function TaskItem({ task, depth, ancestorIds, isDragEnabled, isOverlay }:
             style={{ left: contextMenu.x, top: contextMenu.y }}
           >
             <button
+              type="button"
               onClick={() => {
                 setSelectedTaskMutation.mutate(task.id);
                 setContextMenu(null);
@@ -363,6 +368,7 @@ export function TaskItem({ task, depth, ancestorIds, isDragEnabled, isOverlay }:
             </button>
             {/* todo: implement duplicate func. low priority rn */}
             <button
+              type="button"
               onClick={() => {
                 toggleTaskCompleteMutation.mutate(task.id);
                 setContextMenu(null);
@@ -374,6 +380,7 @@ export function TaskItem({ task, depth, ancestorIds, isDragEnabled, isOverlay }:
             </button>
             <div className="border-t border-surface-200 dark:border-surface-700 my-1" />
             <button
+              type="button"
               onClick={handleExport}
               className="w-full flex items-center gap-2 px-3 py-2 text-sm text-surface-700 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700"
             >
@@ -381,6 +388,7 @@ export function TaskItem({ task, depth, ancestorIds, isDragEnabled, isOverlay }:
               Export
             </button>
             <button
+              type="button"
               onClick={handleDelete}
               className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
             >

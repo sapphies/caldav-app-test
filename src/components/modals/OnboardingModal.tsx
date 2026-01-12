@@ -144,6 +144,7 @@ export function OnboardingModal({ onComplete, onAddAccount }: OnboardingModalPro
       <div className="w-full max-w-md mx-auto">
         <div className="flex items-center justify-between mb-8">
           <button
+            type="button"
             onClick={handlePrevious}
             disabled={isFirstStep}
             className={`p-2 rounded-lg transition-colors ${
@@ -173,6 +174,7 @@ export function OnboardingModal({ onComplete, onAddAccount }: OnboardingModalPro
           </div>
 
           <button
+            type="button"
             onClick={handleNext}
             disabled={isLastStep}
             className={`p-2 rounded-lg transition-colors ${
@@ -202,6 +204,7 @@ export function OnboardingModal({ onComplete, onAddAccount }: OnboardingModalPro
           {isAccountStep ? (
             <>
               <button
+                type="button"
                 onClick={handleAddAccount}
                 className="w-full py-3 px-4 bg-primary-500 hover:bg-primary-600 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
               >
@@ -209,6 +212,7 @@ export function OnboardingModal({ onComplete, onAddAccount }: OnboardingModalPro
                 Add CalDAV Account
               </button>
               <button
+                type="button"
                 onClick={handleNext}
                 className="w-full py-3 px-4 bg-surface-100 dark:bg-surface-700 hover:bg-surface-200 dark:hover:bg-surface-600 text-surface-700 dark:text-surface-300 font-medium rounded-lg transition-colors"
               >
@@ -218,6 +222,7 @@ export function OnboardingModal({ onComplete, onAddAccount }: OnboardingModalPro
           ) : (
             <>
               <button
+                type="button"
                 onClick={handleNext}
                 className="w-full py-3 px-4 bg-primary-500 hover:bg-primary-600 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
               >
@@ -228,6 +233,7 @@ export function OnboardingModal({ onComplete, onAddAccount }: OnboardingModalPro
 
           {isFirstStep && (
             <button
+              type="button"
               onClick={handleSkip}
               className="w-full py-2 text-sm text-surface-500 dark:text-surface-400 hover:text-surface-700 dark:hover:text-surface-300 transition-colors"
             >

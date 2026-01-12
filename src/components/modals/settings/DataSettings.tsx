@@ -24,6 +24,7 @@ export function DataSettings() {
           </p>
           <div className="flex gap-2">
             <button
+              type="button"
               onClick={async () => {
                 const json = exportSettings();
                 try {
@@ -45,6 +46,7 @@ export function DataSettings() {
               Export Settings
             </button>
             <button
+              type="button"
               onClick={async () => {
                 try {
                   const path = await open({
@@ -86,6 +88,7 @@ export function DataSettings() {
 
         <div className="rounded-lg border border-surface-200 dark:border-surface-700 bg-white dark:bg-surface-900">
           <button
+            type="button"
             onClick={() => setShowIncluded(!showIncluded)}
             className="w-full flex items-center justify-between px-4 py-3 text-left text-sm font-medium text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
           >

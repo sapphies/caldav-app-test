@@ -57,6 +57,7 @@ export function ModalWrapper({
             </div>
             {!preventClose && (
               <button
+                type="button"
                 onClick={onClose}
                 className="flex-shrink-0 text-surface-500 dark:text-surface-400 hover:text-surface-700 dark:hover:text-surface-200 transition-colors"
                 aria-label="Close"
