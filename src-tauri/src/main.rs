@@ -14,6 +14,7 @@ fn main() {
     let db_migrations = migrations::get_migrations();
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .plugin(
             tauri_plugin_log::Builder::new()

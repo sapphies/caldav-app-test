@@ -38,6 +38,7 @@
     "core:window:allow-set-focus",
     "os:default",
     "log:default",
-    "opener:default"
+    "opener:default",
+    "updater:default"
   ]
 }

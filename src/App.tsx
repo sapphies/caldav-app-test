@@ -9,6 +9,7 @@ import { SettingsModal } from '@/components/modals/SettingsModal';
 import { Sidebar } from '@/components/Sidebar';
 import { TaskEditor } from '@/components/TaskEditor';
 import { TaskList } from '@/components/TaskList';
+import { UpdateBanner } from '@/components/UpdateBanner';
 import { useAccounts, useSyncQuery, useTasks, useUIState } from '@/hooks/queries';
 import { useAppMenu } from '@/hooks/useAppMenu';
 import { useFileDrop } from '@/hooks/useFileDrop';
@@ -17,6 +18,7 @@ import { useMenuHandlers } from '@/hooks/useMenuHandlers';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/hooks/useTheme';
 import { useTray } from '@/hooks/useTray';
+import { useUpdateChecker } from '@/hooks/useUpdateChecker';
 import { useSettingsStore } from '@/store/settingsStore';
 import { initWebKitDragFix } from './utils/webkit';
 
@@ -53,6 +55,10 @@ function App() {
     lastSyncTime,
     onSyncRequest: syncAll,
   });
+
+  // app update checker
+  const { updateAvailable, downloadAndInstall, dismissUpdate, isDownloading, downloadProgress } =
+    useUpdateChecker();
 
   // app menu state synchronization
   useAppMenu();
@@ -145,6 +151,16 @@ function App() {
       />
 
       <main className="flex-1 flex flex-col min-w-0">
+        {updateAvailable && (
+          <UpdateBanner
+            updateInfo={updateAvailable}
+            onDownload={downloadAndInstall}
+            onDismiss={dismissUpdate}
+            isDownloading={isDownloading}
+            downloadProgress={downloadProgress}
+          />
+        )}
+
         {isOffline && (
           <div className="bg-amber-500 text-white text-center py-1 text-sm font-medium">
             You're offline. Changes will sync when you reconnect.
