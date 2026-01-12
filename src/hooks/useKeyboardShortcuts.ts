@@ -191,13 +191,9 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
 
       // allow some shortcuts even in inputs
       // Escape: close editor/clear search
-      // Cmd+Backspace: delete task (shouldn't conflict with text editing)
       const allowInInput = ['Escape'];
-      const allowWithMetaInInput = ['Backspace']; // Cmd+Backspace for delete
 
-      const isAllowedInInput =
-        allowInInput.includes(e.key) ||
-        (allowWithMetaInInput.includes(e.key) && (e.metaKey || e.ctrlKey));
+      const isAllowedInInput = allowInInput.includes(e.key);
 
       if (isInput && !isAllowedInInput) {
         return;
