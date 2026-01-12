@@ -16,6 +16,43 @@ import { useOffline } from '../useOffline';
 
 const log = createLogger('Sync', '#06b6d4');
 
+// Check if we're in a Tauri environment
+const isTauri = typeof window !== 'undefined' && '__TAURI__' in window;
+
+async function showSyncErrorNotification(
+  calendarName: string,
+  errorMessage: string,
+): Promise<void> {
+  if (isTauri) {
+    try {
+      const notification = await import('@tauri-apps/plugin-notification');
+      const { isPermissionGranted, requestPermission, sendNotification } = notification;
+
+      let permissionGranted = await isPermissionGranted();
+      if (!permissionGranted) {
+        const permission = await requestPermission();
+        permissionGranted = permission === 'granted';
+      }
+
+      if (permissionGranted) {
+        sendNotification({
+          title: `Sync Failed: ${calendarName}`,
+          body: errorMessage,
+        });
+      }
+    } catch (error) {
+      log.error('Failed to show sync error notification:', error);
+    }
+  } else {
+    // Browser fallback
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification(`Sync Failed: ${calendarName}`, {
+        body: errorMessage,
+      });
+    }
+  }
+}
+
 export function useSyncQuery() {
   const queryClient = useQueryClient();
   const { autoSync, syncInterval } = useSettingsStore();
@@ -332,28 +369,32 @@ export function useSyncQuery() {
     try {
       await reconnectAccounts();
 
-      // Get fresh accounts from data layer
+      // get fresh accounts from data layer
       let freshAccounts = getAccounts();
 
-      // STEP 1: Sync calendars for each account (add/remove/update calendars)
+      // sync calendars for each account (add/remove/update calendars)
       for (const account of freshAccounts) {
         try {
           await syncCalendarsForAccount(account.id);
         } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           log.error(`Failed to sync calendars for ${account.name}:`, error);
+          await showSyncErrorNotification(account.name, errorMessage);
         }
       }
 
-      // Re-fetch accounts after calendar sync (calendars may have been added/removed)
+      // re-fetch accounts after calendar sync (calendars may have been added/removed)
       freshAccounts = getAccounts();
 
-      // STEP 2: Sync tasks for each calendar
+      // sync tasks for each calendar
       for (const account of freshAccounts) {
         for (const calendar of account.calendars) {
           try {
             await syncCalendar(calendar.id);
           } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             log.error(`Failed to sync calendar ${calendar.displayName}:`, error);
+            await showSyncErrorNotification(calendar.displayName, errorMessage);
           }
         }
       }
@@ -361,6 +402,7 @@ export function useSyncQuery() {
       const message = error instanceof Error ? error.message : 'Sync failed';
       setLastSyncError(message);
       log.error('Sync error:', error);
+      await showSyncErrorNotification('Sync', message);
     } finally {
       setIsSyncing(false);
       setLastSyncTime(new Date());
