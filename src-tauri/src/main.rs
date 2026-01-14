@@ -25,6 +25,7 @@ fn main() {
                     }),
                     Target::new(TargetKind::Webview),
                 ])
+                .level(log::LevelFilter::Debug)
                 .max_file_size(50_000)
                 .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepAll)
                 .build(),
